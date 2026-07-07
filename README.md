@@ -20,9 +20,10 @@ while the core API is designed. Do not build against these versions.
 
     python/tokenmaster    core library (PyPI: tokenmaster)
     python/ctxmaster      visualization layer (PyPI: ctxmaster)
+    js/tokenmaster        core placeholder (npm: tokenmaster)
+    js/ctxmaster          visualization placeholder (npm: ctxmaster)
 
-Rust crates and npm packages under the same names will follow in this
-repository.
+Rust crates under the same names will follow in this repository.
 
 ## License
 

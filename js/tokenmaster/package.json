@@ -1,0 +1,35 @@
+{
+  "name": "tokenmaster",
+  "version": "0.0.1",
+  "description": "Core context-budget metering and decision engine for LLM applications: normalized token accounting, effective-budget gauges, turns-to-exhaustion prediction, and compaction/handoff decisions. Placeholder release.",
+  "main": "index.js",
+  "files": [
+    "index.js"
+  ],
+  "scripts": {
+    "test": "node --test"
+  },
+  "keywords": [
+    "llm",
+    "tokens",
+    "context-window",
+    "context-management",
+    "compaction",
+    "continuation-prompt",
+    "metering"
+  ],
+  "author": "Muntaser Syed <jemsbhai@gmail.com>",
+  "license": "MIT",
+  "engines": {
+    "node": ">=18"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jemsbhai/tokenmaster.git",
+    "directory": "js/tokenmaster"
+  },
+  "bugs": {
+    "url": "https://github.com/jemsbhai/tokenmaster/issues"
+  },
+  "homepage": "https://github.com/jemsbhai/tokenmaster#readme"
+}

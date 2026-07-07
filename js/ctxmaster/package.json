@@ -1,0 +1,38 @@
+{
+  "name": "ctxmaster",
+  "version": "0.0.1",
+  "description": "Visualization layer for tokenmaster: CLI, terminal gauge, and dashboard renderers for LLM context-budget metering. Placeholder release.",
+  "main": "index.js",
+  "files": [
+    "index.js"
+  ],
+  "scripts": {
+    "test": "node --test"
+  },
+  "keywords": [
+    "llm",
+    "tokens",
+    "context-window",
+    "visualization",
+    "terminal",
+    "gauge",
+    "dashboard"
+  ],
+  "author": "Muntaser Syed <jemsbhai@gmail.com>",
+  "license": "MIT",
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "tokenmaster": "^0.0.1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jemsbhai/tokenmaster.git",
+    "directory": "js/ctxmaster"
+  },
+  "bugs": {
+    "url": "https://github.com/jemsbhai/tokenmaster/issues"
+  },
+  "homepage": "https://github.com/jemsbhai/tokenmaster#readme"
+}
