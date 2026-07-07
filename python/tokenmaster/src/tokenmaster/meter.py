@@ -35,7 +35,9 @@ import math
 from datetime import datetime, timezone
 from typing import Any, Iterator, Mapping
 
+from .advisor import Policy, Recommendation, TaskContext, ThresholdPolicy
 from .events import (
+    AdvisorRecommendation,
     Event,
     EventCallback,
     ModelChanged,
@@ -213,6 +215,34 @@ class Meter:
         self._events.append(event)
         for callback in tuple(self._subscribers):
             callback(event)
+
+    # ------------------------------------------------------------------ #
+    # advisor
+
+    def advise(
+        self,
+        task: TaskContext | None = None,
+        *,
+        policy: Policy | None = None,
+    ) -> Recommendation:
+        """Evaluate a policy against the current state and emit the result.
+
+        The default policy is a ThresholdPolicy aligned to this meter's own
+        zone thresholds, so the gauge and the default advice cannot
+        disagree. Every call emits an AdvisorRecommendation event; the
+        caller controls the cadence.
+        """
+        chosen = policy or ThresholdPolicy(
+            warn_at=self.caution, compact_at=self.critical
+        )
+        recommendation = chosen.evaluate(self.state(), task)
+        self._emit(
+            AdvisorRecommendation(
+                turn_id=self._turns[-1].turn_id if self._turns else None,
+                recommendation=recommendation,
+            )
+        )
+        return recommendation
 
     # ------------------------------------------------------------------ #
     # state

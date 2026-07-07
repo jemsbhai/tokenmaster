@@ -5,7 +5,19 @@ Pre-release: the data model and Meter computation implement docs/core-api.md
 land in subsequent versions; the public surface may still shift before 0.1.0.
 """
 
+from .advisor import (
+    Action,
+    EffectEstimate,
+    Policy,
+    RationaleTrace,
+    Recommendation,
+    TaskContext,
+    TaskCriticality,
+    ThresholdPolicy,
+    Urgency,
+)
 from .events import (
+    AdvisorRecommendation,
     Event,
     ModelChanged,
     TurnRecorded,
@@ -33,7 +45,17 @@ __version__ = "0.0.1"
 
 __all__ = [
     "Meter",
+    "Action",
+    "Urgency",
+    "TaskCriticality",
+    "TaskContext",
+    "RationaleTrace",
+    "EffectEstimate",
+    "Recommendation",
+    "Policy",
+    "ThresholdPolicy",
     "Event",
+    "AdvisorRecommendation",
     "TurnRecorded",
     "ZoneChanged",
     "VelocityShift",

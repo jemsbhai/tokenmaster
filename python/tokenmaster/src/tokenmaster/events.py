@@ -19,6 +19,7 @@ from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from typing import Any, Callable, ClassVar, Mapping
 
+from .advisor import Recommendation
 from .types import SCHEMA_VERSION, MeterState, TurnUsage, Zone
 
 
@@ -149,9 +150,33 @@ class ModelChanged(Event):
         }
 
 
+@dataclass(frozen=True, kw_only=True)
+class AdvisorRecommendation(Event):
+    """A policy was evaluated; carries the full recommendation."""
+
+    EVENT_TYPE: ClassVar[str] = "advisor_recommendation"
+
+    recommendation: Recommendation
+
+    def payload(self) -> dict[str, Any]:
+        return {"recommendation": self.recommendation.to_dict()}
+
+    @classmethod
+    def _from_payload(cls, payload: Mapping[str, Any]) -> dict[str, Any]:
+        return {
+            "recommendation": Recommendation.from_dict(payload["recommendation"])
+        }
+
+
 _EVENT_TYPES: dict[str, type[Event]] = {
     cls.EVENT_TYPE: cls
-    for cls in (TurnRecorded, ZoneChanged, VelocityShift, ModelChanged)
+    for cls in (
+        TurnRecorded,
+        ZoneChanged,
+        VelocityShift,
+        ModelChanged,
+        AdvisorRecommendation,
+    )
 }
 
 EventCallback = Callable[[Event], None]
@@ -178,5 +203,6 @@ __all__ = [
     "ZoneChanged",
     "VelocityShift",
     "ModelChanged",
+    "AdvisorRecommendation",
     "event_from_dict",
 ]
