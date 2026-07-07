@@ -22,8 +22,8 @@ while the core API is designed. Do not build against these versions.
     python/ctxmaster      visualization layer (PyPI: ctxmaster)
     js/tokenmaster        core placeholder (npm: tokenmaster)
     js/ctxmaster          visualization placeholder (npm: ctxmaster)
-
-Rust crates under the same names will follow in this repository.
+    rust/tokenmaster      core placeholder (crates.io: tokenmaster)
+    rust/ctxmaster        visualization placeholder (crates.io: ctxmaster)
 
 ## License
 

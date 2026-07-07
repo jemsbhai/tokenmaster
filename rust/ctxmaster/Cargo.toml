@@ -1,0 +1,13 @@
+[package]
+name = "ctxmaster"
+version = "0.0.1"
+edition = "2021"
+description = "Visualization layer for tokenmaster: CLI, terminal gauge, and dashboard renderers for LLM context-budget metering. Placeholder release."
+license = "MIT"
+repository = "https://github.com/jemsbhai/tokenmaster"
+readme = "README.md"
+keywords = ["llm", "visualization", "terminal", "gauge", "context-window"]
+categories = ["visualization", "development-tools"]
+
+[dependencies]
+tokenmaster = { version = "0.0.1", path = "../tokenmaster" }
