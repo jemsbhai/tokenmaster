@@ -239,7 +239,9 @@ class Meter:
             velocity = self._ew_mean
             velocity_std = math.sqrt(self._ew_var)
             provenance["velocity"] = f"derived (ewma alpha={self.alpha})"
-            if velocity > 0:
+            if headroom_effective <= 0:
+                provenance["eta_turns"] = "exhausted (no headroom remaining)"
+            elif velocity > 0:
                 expected = headroom_effective / velocity
                 conservative = headroom_effective / (velocity + velocity_std)
                 eta = EtaEstimate(expected=expected, conservative=conservative)

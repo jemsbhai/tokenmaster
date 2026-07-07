@@ -173,3 +173,15 @@ def test_constructor_validation():
         Meter(profile(), caution=0.9, critical=0.8)
     with pytest.raises(ValueError):
         Meter(profile(), reserved_output=-1)
+
+
+def test_exhausted_headroom_yields_no_eta_with_reason():
+    m = Meter(profile(window=1_000))
+    for total in (400, 700, 1_100):
+        m.record(turn_with_total(total))
+    s = m.state()
+    assert s.velocity is not None
+    assert s.eta_turns is None
+    assert "exhausted" in s.provenance["eta_turns"]
+    assert s.fill_effective > 1.0
+    assert s.zone is Zone.CRITICAL
