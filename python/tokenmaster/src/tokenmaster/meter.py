@@ -65,6 +65,21 @@ class Meter:
         self._ew_var: float = 0.0
 
     # ------------------------------------------------------------------ #
+    # construction from the registry
+
+    @classmethod
+    def for_model(cls, model_id: str, **kwargs: Any) -> "Meter":
+        """Construct a Meter from the bundled registry, zero configuration.
+
+        Accepts canonical ids, bare names, aliases, and dated snapshot
+        suffixes; raises UnknownModelError with close-match suggestions
+        otherwise.
+        """
+        from .registry import get_profile
+
+        return cls(get_profile(model_id), **kwargs)
+
+    # ------------------------------------------------------------------ #
     # ingestion
 
     def record(self, usage: TurnUsage | Mapping[str, Any]) -> TurnUsage:

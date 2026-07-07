@@ -6,6 +6,7 @@ land in subsequent versions; the public surface may still shift before 0.1.0.
 """
 
 from .meter import Meter
+from .registry import Registry, UnknownModelError, default_registry, get_profile
 from .types import (
     SCHEMA_VERSION,
     Breakdown,
@@ -24,6 +25,10 @@ __version__ = "0.0.1"
 
 __all__ = [
     "Meter",
+    "Registry",
+    "UnknownModelError",
+    "default_registry",
+    "get_profile",
     "SCHEMA_VERSION",
     "Breakdown",
     "CacheState",
