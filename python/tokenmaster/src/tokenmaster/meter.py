@@ -1,4 +1,4 @@
-"""Meter: turn ingestion and MeterState computation, per docs/core-api.md.
+"""Meter: turn ingestion, MeterState computation, and event emission.
 
 Definitions implemented here are the reference for the golden vectors and for
 the JavaScript and Rust ports:
@@ -15,6 +15,17 @@ the JavaScript and Rust ports:
   eta_turns.conservative = headroom_effective / (velocity + velocity_std).
 - zone: keyed to fill_effective with thresholds caution 0.70 and critical
   0.85 (contract decision D1, provisional pending experiment E2).
+
+Event emission per recorded turn, in this deterministic order (section 4):
+TurnRecorded, then ZoneChanged (on boundary crossing), then VelocityShift
+(when exposed velocity moves by more than velocity_shift_factor, provisional
+default 1.5), then ModelChanged (when the turn's model_id differs from the
+previous one). Subscriber callbacks are synchronous and exceptions propagate
+to the caller of record(): a subscriber that throws is a bug worth hearing
+about, and consumers that disagree can wrap their own callbacks. The event
+history kept for the iterator is unbounded in 0.1. Persistence via
+from_dict/from_json replays turns, so event timestamps are regenerated on
+restore; MeterState round-trips exactly, the event log does not claim to.
 """
 
 from __future__ import annotations
@@ -22,8 +33,16 @@ from __future__ import annotations
 import json
 import math
 from datetime import datetime, timezone
-from typing import Any, Mapping
+from typing import Any, Iterator, Mapping
 
+from .events import (
+    Event,
+    EventCallback,
+    ModelChanged,
+    TurnRecorded,
+    VelocityShift,
+    ZoneChanged,
+)
 from .types import (
     SCHEMA_VERSION,
     CacheState,
@@ -37,6 +56,17 @@ from .types import (
 _COLD_START_TURNS = 3
 
 
+def _is_velocity_shift(previous: float, current: float, factor: float) -> bool:
+    if previous == 0.0 and current == 0.0:
+        return False
+    if previous == 0.0 or current == 0.0:
+        return True
+    if (previous > 0.0) != (current > 0.0):
+        return True
+    ratio = abs(current) / abs(previous)
+    return ratio >= factor or (1.0 / ratio) >= factor
+
+
 class Meter:
     """Context-budget meter for one conversation against one model profile."""
 
@@ -48,6 +78,7 @@ class Meter:
         alpha: float = 0.3,
         caution: float = 0.70,
         critical: float = 0.85,
+        velocity_shift_factor: float = 1.5,
     ) -> None:
         if not 0.0 < alpha <= 1.0:
             raise ValueError("alpha must be in (0, 1]")
@@ -55,14 +86,20 @@ class Meter:
             raise ValueError("thresholds must satisfy 0 < caution < critical <= 1")
         if reserved_output < 0:
             raise ValueError("reserved_output must be non-negative")
+        if velocity_shift_factor <= 1.0:
+            raise ValueError("velocity_shift_factor must be greater than 1")
         self.profile = profile
         self.reserved_output = reserved_output
         self.alpha = alpha
         self.caution = caution
         self.critical = critical
+        self.velocity_shift_factor = velocity_shift_factor
         self._turns: list[TurnUsage] = []
         self._ew_mean: float | None = None
         self._ew_var: float = 0.0
+        self._events: list[Event] = []
+        self._subscribers: list[EventCallback] = []
+        self._current_model: str = profile.model_id
 
     # ------------------------------------------------------------------ #
     # construction from the registry
@@ -85,8 +122,8 @@ class Meter:
     def record(self, usage: TurnUsage | Mapping[str, Any]) -> TurnUsage:
         """Record one turn. Accepts a TurnUsage or a canonical plain dict.
 
-        turn_id and timestamp are filled in when absent. Returns the stored
-        TurnUsage.
+        turn_id and timestamp are filled in when absent. Emits events in the
+        documented order and returns the stored TurnUsage.
         """
         next_id = len(self._turns) + 1
         if isinstance(usage, TurnUsage):
@@ -99,12 +136,50 @@ class Meter:
             d.setdefault("timestamp", _utcnow())
             turn = TurnUsage.from_dict(d, turn_id=next_id)
 
+        pre_state = self.state()
+        prev_zone = pre_state.zone
+        prev_velocity = pre_state.velocity
+
         prev_total = self._turns[-1].context_total() if self._turns else None
         self._turns.append(turn)
-
         if prev_total is not None:
             growth = float(turn.context_total() - prev_total)
             self._update_ewma(growth)
+
+        state = self.state()
+        self._emit(TurnRecorded(turn_id=turn.turn_id, turn=turn, state=state))
+        if state.zone != prev_zone:
+            self._emit(
+                ZoneChanged(
+                    turn_id=turn.turn_id,
+                    from_zone=prev_zone,
+                    to_zone=state.zone,
+                    fill_effective=state.fill_effective,
+                )
+            )
+        if (
+            prev_velocity is not None
+            and state.velocity is not None
+            and _is_velocity_shift(
+                prev_velocity, state.velocity, self.velocity_shift_factor
+            )
+        ):
+            self._emit(
+                VelocityShift(
+                    turn_id=turn.turn_id,
+                    previous=prev_velocity,
+                    current=state.velocity,
+                )
+            )
+        if turn.model_id and turn.model_id != self._current_model:
+            self._emit(
+                ModelChanged(
+                    turn_id=turn.turn_id,
+                    previous_model_id=self._current_model,
+                    new_model_id=turn.model_id,
+                )
+            )
+            self._current_model = turn.model_id
         return turn
 
     def _update_ewma(self, growth: float) -> None:
@@ -116,6 +191,28 @@ class Meter:
         incr = self.alpha * diff
         self._ew_mean = self._ew_mean + incr
         self._ew_var = (1.0 - self.alpha) * (self._ew_var + diff * incr)
+
+    # ------------------------------------------------------------------ #
+    # events
+
+    def subscribe(self, callback: EventCallback):
+        """Register a synchronous event callback; returns an unsubscriber."""
+        self._subscribers.append(callback)
+
+        def unsubscribe() -> None:
+            if callback in self._subscribers:
+                self._subscribers.remove(callback)
+
+        return unsubscribe
+
+    def events(self) -> Iterator[Event]:
+        """Iterate over all events emitted so far, in order."""
+        return iter(tuple(self._events))
+
+    def _emit(self, event: Event) -> None:
+        self._events.append(event)
+        for callback in tuple(self._subscribers):
+            callback(event)
 
     # ------------------------------------------------------------------ #
     # state
@@ -214,6 +311,7 @@ class Meter:
                 "alpha": self.alpha,
                 "caution": self.caution,
                 "critical": self.critical,
+                "velocity_shift_factor": self.velocity_shift_factor,
             },
             "turns": [t.to_dict() for t in self._turns],
         }
@@ -230,6 +328,7 @@ class Meter:
             alpha=float(config.get("alpha", 0.3)),
             caution=float(config.get("caution", 0.70)),
             critical=float(config.get("critical", 0.85)),
+            velocity_shift_factor=float(config.get("velocity_shift_factor", 1.5)),
         )
         for turn_dict in d.get("turns", []):
             meter.record(TurnUsage.from_dict(turn_dict))

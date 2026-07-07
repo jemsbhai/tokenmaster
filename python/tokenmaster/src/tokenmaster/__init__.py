@@ -5,6 +5,14 @@ Pre-release: the data model and Meter computation implement docs/core-api.md
 land in subsequent versions; the public surface may still shift before 0.1.0.
 """
 
+from .events import (
+    Event,
+    ModelChanged,
+    TurnRecorded,
+    VelocityShift,
+    ZoneChanged,
+    event_from_dict,
+)
 from .meter import Meter
 from .registry import Registry, UnknownModelError, default_registry, get_profile
 from .types import (
@@ -25,6 +33,12 @@ __version__ = "0.0.1"
 
 __all__ = [
     "Meter",
+    "Event",
+    "TurnRecorded",
+    "ZoneChanged",
+    "VelocityShift",
+    "ModelChanged",
+    "event_from_dict",
     "Registry",
     "UnknownModelError",
     "default_registry",
