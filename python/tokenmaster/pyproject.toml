@@ -4,8 +4,8 @@ build-backend = "hatchling.build"
 
 [project]
 name = "tokenmaster"
-version = "0.0.1"
-description = "Core context-budget metering and decision engine for LLM applications: normalized token accounting, effective-budget gauges, turns-to-exhaustion prediction, and compaction/handoff decisions. Placeholder release."
+version = "0.1.0"
+description = "Core context-budget metering and decision engine for LLM applications: normalized token accounting, effective-budget gauges, turns-to-exhaustion prediction, and compaction/handoff decisions."
 readme = "README.md"
 requires-python = ">=3.10"
 license = "MIT"
@@ -23,7 +23,7 @@ keywords = [
   "metering",
 ]
 classifiers = [
-  "Development Status :: 1 - Planning",
+  "Development Status :: 3 - Alpha",
   "Intended Audience :: Developers",
   "Programming Language :: Python :: 3",
   "Topic :: Scientific/Engineering :: Artificial Intelligence",

@@ -1,8 +1,9 @@
 """tokenmaster: core context-budget metering and decision engine for LLM applications.
 
-Pre-release: the data model and Meter computation implement docs/core-api.md
-(contract 0.1). Registry, events, advisor policies, and the fidelity protocol
-land in subsequent versions; the public surface may still shift before 0.1.0.
+0.1.x alpha: implements the core API contract (docs/core-api.md, 0.1) with
+conformance vectors under spec/. The public surface may still shift before
+0.2; provider adapters, tokenizer estimators, and LLM-backed probe
+generators are planned but not yet included.
 """
 
 from .advisor import (
@@ -55,7 +56,7 @@ from .types import (
     Zone,
 )
 
-__version__ = "0.0.1"
+__version__ = "0.1.0"
 
 __all__ = [
     "Meter",
@@ -118,5 +119,5 @@ def about() -> dict:
         ),
         "companion": "ctxmaster (visualization layer)",
         "repository": "https://github.com/jemsbhai/tokenmaster",
-        "status": "pre-release",
+        "status": "alpha",
     }

@@ -4,8 +4,8 @@ build-backend = "hatchling.build"
 
 [project]
 name = "ctxmaster"
-version = "0.0.1"
-description = "Visualization layer for tokenmaster: CLI, terminal gauge, and dashboard renderers for LLM context-budget metering. Placeholder release."
+version = "0.1.0"
+description = "Visualization layer for tokenmaster: terminal context gauge and renderers for LLM context-budget metering."
 readme = "README.md"
 requires-python = ">=3.10"
 license = "MIT"
@@ -23,14 +23,14 @@ keywords = [
   "dashboard",
 ]
 classifiers = [
-  "Development Status :: 1 - Planning",
+  "Development Status :: 3 - Alpha",
   "Intended Audience :: Developers",
   "Programming Language :: Python :: 3",
   "Topic :: Scientific/Engineering :: Artificial Intelligence",
   "Topic :: Software Development :: Libraries",
 ]
 dependencies = [
-  "tokenmaster>=0.0.1",
+  "tokenmaster>=0.1.0,<0.2",
   "rich>=13.0",
 ]
 

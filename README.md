@@ -13,8 +13,10 @@ schema, so anyone can build a visualizer against it; ctxmaster is the first.
 
 ## Status
 
-Placeholder stage (0.0.1): reserving package names and laying out the monorepo
-while the core API is designed. Do not build against these versions.
+Python packages are at 0.1.0 (alpha): the core contract (docs/core-api.md)
+is implemented, with conformance vectors under spec/ freezing the arithmetic
+for the ports. npm and crates.io names remain 0.0.1 placeholders until the
+JavaScript and Rust implementations land.
 
 ## Repository layout
 
