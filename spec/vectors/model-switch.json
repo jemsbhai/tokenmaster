@@ -1,0 +1,125 @@
+{
+  "config": {
+    "alpha": 0.3,
+    "caution": 0.7,
+    "critical": 0.85,
+    "reserved_output": 0,
+    "velocity_shift_factor": 1.5
+  },
+  "description": "Mid-conversation model_id change emits ModelChanged.",
+  "expected": {
+    "events": [
+      {
+        "event_type": "turn_recorded",
+        "turn_id": 1
+      },
+      {
+        "event_type": "turn_recorded",
+        "turn_id": 2
+      },
+      {
+        "event_type": "model_changed",
+        "new_model_id": "spec:other",
+        "previous_model_id": "spec:model",
+        "turn_id": 2
+      }
+    ],
+    "states": [
+      {
+        "cache": null,
+        "effective_source": "nominal (uncalibrated)",
+        "eta_turns": null,
+        "fill_effective": 0.1,
+        "fill_nominal": 0.1,
+        "headroom_effective": 9000,
+        "headroom_nominal": 9000,
+        "hidden_overhead": null,
+        "model_id": "spec:model",
+        "provenance": {
+          "eta_turns": "unavailable (cold start, needs 3 turns)",
+          "used_tokens": "reported",
+          "velocity": "unavailable (cold start, needs 3 turns)",
+          "window_effective": "nominal (uncalibrated)"
+        },
+        "reserved_output": 0,
+        "schema_version": "0.1",
+        "turns": 1,
+        "used_tokens": 1000,
+        "velocity": null,
+        "velocity_std": null,
+        "window_effective": 10000,
+        "window_nominal": 10000,
+        "zone": "green"
+      },
+      {
+        "cache": null,
+        "effective_source": "nominal (uncalibrated)",
+        "eta_turns": null,
+        "fill_effective": 0.15,
+        "fill_nominal": 0.15,
+        "headroom_effective": 8500,
+        "headroom_nominal": 8500,
+        "hidden_overhead": null,
+        "model_id": "spec:model",
+        "provenance": {
+          "eta_turns": "unavailable (cold start, needs 3 turns)",
+          "used_tokens": "reported",
+          "velocity": "unavailable (cold start, needs 3 turns)",
+          "window_effective": "nominal (uncalibrated)"
+        },
+        "reserved_output": 0,
+        "schema_version": "0.1",
+        "turns": 2,
+        "used_tokens": 1500,
+        "velocity": null,
+        "velocity_std": null,
+        "window_effective": 10000,
+        "window_nominal": 10000,
+        "zone": "green"
+      }
+    ]
+  },
+  "profile": {
+    "effective": null,
+    "max_output": null,
+    "model_id": "spec:model",
+    "pricing": null,
+    "provider": "spec",
+    "schema_version": "0.1",
+    "source": "spec fixture",
+    "tokenizer_hint": null,
+    "window_nominal": 10000
+  },
+  "schema_version": "0.1",
+  "turns": [
+    {
+      "breakdown": null,
+      "cache_read_tokens": 0,
+      "cache_write_tokens": 0,
+      "input_tokens": 1000,
+      "model_id": "spec:model",
+      "output_tokens": 0,
+      "raw": null,
+      "reasoning_tokens": 0,
+      "schema_version": "0.1",
+      "source": "reported",
+      "timestamp": "2026-07-07T00:00:01+00:00",
+      "turn_id": 1
+    },
+    {
+      "breakdown": null,
+      "cache_read_tokens": 0,
+      "cache_write_tokens": 0,
+      "input_tokens": 1500,
+      "model_id": "spec:other",
+      "output_tokens": 0,
+      "raw": null,
+      "reasoning_tokens": 0,
+      "schema_version": "0.1",
+      "source": "reported",
+      "timestamp": "2026-07-07T00:00:02+00:00",
+      "turn_id": 2
+    }
+  ],
+  "vector_id": "model-switch"
+}

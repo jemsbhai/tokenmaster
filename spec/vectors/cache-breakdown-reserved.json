@@ -1,0 +1,87 @@
+{
+  "config": {
+    "alpha": 0.3,
+    "caution": 0.7,
+    "critical": 0.85,
+    "reserved_output": 500,
+    "velocity_shift_factor": 1.5
+  },
+  "description": "Cache reads/writes, breakdown overhead, and reserved output.",
+  "expected": {
+    "events": [
+      {
+        "event_type": "turn_recorded",
+        "turn_id": 1
+      }
+    ],
+    "states": [
+      {
+        "cache": {
+          "last_cache_read": 400,
+          "last_cache_write": 50,
+          "stable_prefix_tokens": 450
+        },
+        "effective_source": "nominal (uncalibrated)",
+        "eta_turns": null,
+        "fill_effective": 0.06,
+        "fill_nominal": 0.06,
+        "headroom_effective": 8900,
+        "headroom_nominal": 8900,
+        "hidden_overhead": 450,
+        "model_id": "spec:model",
+        "provenance": {
+          "cache": "estimated",
+          "eta_turns": "unavailable (cold start, needs 3 turns)",
+          "hidden_overhead": "reported",
+          "used_tokens": "reported",
+          "velocity": "unavailable (cold start, needs 3 turns)",
+          "window_effective": "nominal (uncalibrated)"
+        },
+        "reserved_output": 500,
+        "schema_version": "0.1",
+        "turns": 1,
+        "used_tokens": 600,
+        "velocity": null,
+        "velocity_std": null,
+        "window_effective": 10000,
+        "window_nominal": 10000,
+        "zone": "green"
+      }
+    ]
+  },
+  "profile": {
+    "effective": null,
+    "max_output": null,
+    "model_id": "spec:model",
+    "pricing": null,
+    "provider": "spec",
+    "schema_version": "0.1",
+    "source": "spec fixture",
+    "tokenizer_hint": null,
+    "window_nominal": 10000
+  },
+  "schema_version": "0.1",
+  "turns": [
+    {
+      "breakdown": {
+        "attachments": 0,
+        "history": 0,
+        "query": 0,
+        "system_prompt": 300,
+        "tool_schemas": 150
+      },
+      "cache_read_tokens": 400,
+      "cache_write_tokens": 50,
+      "input_tokens": 100,
+      "model_id": "spec:model",
+      "output_tokens": 30,
+      "raw": null,
+      "reasoning_tokens": 20,
+      "schema_version": "0.1",
+      "source": "reported",
+      "timestamp": "2026-07-07T00:00:01+00:00",
+      "turn_id": 1
+    }
+  ],
+  "vector_id": "cache-breakdown-reserved"
+}

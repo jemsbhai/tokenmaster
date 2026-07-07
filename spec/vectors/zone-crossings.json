@@ -1,0 +1,227 @@
+{
+  "config": {
+    "alpha": 0.3,
+    "caution": 0.7,
+    "critical": 0.85,
+    "reserved_output": 0,
+    "velocity_shift_factor": 1.5
+  },
+  "description": "green -> caution -> critical with ZoneChanged events.",
+  "expected": {
+    "events": [
+      {
+        "event_type": "turn_recorded",
+        "turn_id": 1
+      },
+      {
+        "event_type": "turn_recorded",
+        "turn_id": 2
+      },
+      {
+        "event_type": "zone_changed",
+        "fill_effective": 0.72,
+        "from_zone": "green",
+        "to_zone": "caution",
+        "turn_id": 2
+      },
+      {
+        "event_type": "turn_recorded",
+        "turn_id": 3
+      },
+      {
+        "event_type": "turn_recorded",
+        "turn_id": 4
+      },
+      {
+        "event_type": "zone_changed",
+        "fill_effective": 0.86,
+        "from_zone": "caution",
+        "to_zone": "critical",
+        "turn_id": 4
+      }
+    ],
+    "states": [
+      {
+        "cache": null,
+        "effective_source": "nominal (uncalibrated)",
+        "eta_turns": null,
+        "fill_effective": 0.5,
+        "fill_nominal": 0.5,
+        "headroom_effective": 500,
+        "headroom_nominal": 500,
+        "hidden_overhead": null,
+        "model_id": "spec:model",
+        "provenance": {
+          "eta_turns": "unavailable (cold start, needs 3 turns)",
+          "used_tokens": "reported",
+          "velocity": "unavailable (cold start, needs 3 turns)",
+          "window_effective": "nominal (uncalibrated)"
+        },
+        "reserved_output": 0,
+        "schema_version": "0.1",
+        "turns": 1,
+        "used_tokens": 500,
+        "velocity": null,
+        "velocity_std": null,
+        "window_effective": 1000,
+        "window_nominal": 1000,
+        "zone": "green"
+      },
+      {
+        "cache": null,
+        "effective_source": "nominal (uncalibrated)",
+        "eta_turns": null,
+        "fill_effective": 0.72,
+        "fill_nominal": 0.72,
+        "headroom_effective": 280,
+        "headroom_nominal": 280,
+        "hidden_overhead": null,
+        "model_id": "spec:model",
+        "provenance": {
+          "eta_turns": "unavailable (cold start, needs 3 turns)",
+          "used_tokens": "reported",
+          "velocity": "unavailable (cold start, needs 3 turns)",
+          "window_effective": "nominal (uncalibrated)"
+        },
+        "reserved_output": 0,
+        "schema_version": "0.1",
+        "turns": 2,
+        "used_tokens": 720,
+        "velocity": null,
+        "velocity_std": null,
+        "window_effective": 1000,
+        "window_nominal": 1000,
+        "zone": "caution"
+      },
+      {
+        "cache": null,
+        "effective_source": "nominal (uncalibrated)",
+        "eta_turns": {
+          "conservative": 1.0662071620483744,
+          "expected": 1.7197452229299364
+        },
+        "fill_effective": 0.73,
+        "fill_nominal": 0.73,
+        "headroom_effective": 270,
+        "headroom_nominal": 270,
+        "hidden_overhead": null,
+        "model_id": "spec:model",
+        "provenance": {
+          "eta_turns": "derived",
+          "used_tokens": "reported",
+          "velocity": "derived (ewma alpha=0.3)",
+          "window_effective": "nominal (uncalibrated)"
+        },
+        "reserved_output": 0,
+        "schema_version": "0.1",
+        "turns": 3,
+        "used_tokens": 730,
+        "velocity": 157.0,
+        "velocity_std": 96.23408959407264,
+        "window_effective": 1000,
+        "window_nominal": 1000,
+        "zone": "caution"
+      },
+      {
+        "cache": null,
+        "effective_source": "nominal (uncalibrated)",
+        "eta_turns": {
+          "conservative": 0.6077434543752895,
+          "expected": 0.9402283411685695
+        },
+        "fill_effective": 0.86,
+        "fill_nominal": 0.86,
+        "headroom_effective": 140,
+        "headroom_nominal": 140,
+        "hidden_overhead": null,
+        "model_id": "spec:model",
+        "provenance": {
+          "eta_turns": "derived",
+          "used_tokens": "reported",
+          "velocity": "derived (ewma alpha=0.3)",
+          "window_effective": "nominal (uncalibrated)"
+        },
+        "reserved_output": 0,
+        "schema_version": "0.1",
+        "turns": 4,
+        "used_tokens": 860,
+        "velocity": 148.9,
+        "velocity_std": 81.46035845735028,
+        "window_effective": 1000,
+        "window_nominal": 1000,
+        "zone": "critical"
+      }
+    ]
+  },
+  "profile": {
+    "effective": null,
+    "max_output": null,
+    "model_id": "spec:model",
+    "pricing": null,
+    "provider": "spec",
+    "schema_version": "0.1",
+    "source": "spec fixture",
+    "tokenizer_hint": null,
+    "window_nominal": 1000
+  },
+  "schema_version": "0.1",
+  "turns": [
+    {
+      "breakdown": null,
+      "cache_read_tokens": 0,
+      "cache_write_tokens": 0,
+      "input_tokens": 500,
+      "model_id": "spec:model",
+      "output_tokens": 0,
+      "raw": null,
+      "reasoning_tokens": 0,
+      "schema_version": "0.1",
+      "source": "reported",
+      "timestamp": "2026-07-07T00:00:01+00:00",
+      "turn_id": 1
+    },
+    {
+      "breakdown": null,
+      "cache_read_tokens": 0,
+      "cache_write_tokens": 0,
+      "input_tokens": 720,
+      "model_id": "spec:model",
+      "output_tokens": 0,
+      "raw": null,
+      "reasoning_tokens": 0,
+      "schema_version": "0.1",
+      "source": "reported",
+      "timestamp": "2026-07-07T00:00:02+00:00",
+      "turn_id": 2
+    },
+    {
+      "breakdown": null,
+      "cache_read_tokens": 0,
+      "cache_write_tokens": 0,
+      "input_tokens": 730,
+      "model_id": "spec:model",
+      "output_tokens": 0,
+      "raw": null,
+      "reasoning_tokens": 0,
+      "schema_version": "0.1",
+      "source": "reported",
+      "timestamp": "2026-07-07T00:00:03+00:00",
+      "turn_id": 3
+    },
+    {
+      "breakdown": null,
+      "cache_read_tokens": 0,
+      "cache_write_tokens": 0,
+      "input_tokens": 860,
+      "model_id": "spec:model",
+      "output_tokens": 0,
+      "raw": null,
+      "reasoning_tokens": 0,
+      "schema_version": "0.1",
+      "source": "reported",
+      "timestamp": "2026-07-07T00:00:04+00:00",
+      "turn_id": 4
+    }
+  ],
+  "vector_id": "zone-crossings"
+}

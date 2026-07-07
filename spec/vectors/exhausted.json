@@ -1,0 +1,177 @@
+{
+  "config": {
+    "alpha": 0.3,
+    "caution": 0.7,
+    "critical": 0.85,
+    "reserved_output": 0,
+    "velocity_shift_factor": 1.5
+  },
+  "description": "Overflow: negative headroom, eta exhausted reason.",
+  "expected": {
+    "events": [
+      {
+        "event_type": "turn_recorded",
+        "turn_id": 1
+      },
+      {
+        "event_type": "turn_recorded",
+        "turn_id": 2
+      },
+      {
+        "event_type": "zone_changed",
+        "fill_effective": 0.7,
+        "from_zone": "green",
+        "to_zone": "caution",
+        "turn_id": 2
+      },
+      {
+        "event_type": "turn_recorded",
+        "turn_id": 3
+      },
+      {
+        "event_type": "zone_changed",
+        "fill_effective": 1.1,
+        "from_zone": "caution",
+        "to_zone": "critical",
+        "turn_id": 3
+      }
+    ],
+    "states": [
+      {
+        "cache": null,
+        "effective_source": "nominal (uncalibrated)",
+        "eta_turns": null,
+        "fill_effective": 0.4,
+        "fill_nominal": 0.4,
+        "headroom_effective": 600,
+        "headroom_nominal": 600,
+        "hidden_overhead": null,
+        "model_id": "spec:model",
+        "provenance": {
+          "eta_turns": "unavailable (cold start, needs 3 turns)",
+          "used_tokens": "reported",
+          "velocity": "unavailable (cold start, needs 3 turns)",
+          "window_effective": "nominal (uncalibrated)"
+        },
+        "reserved_output": 0,
+        "schema_version": "0.1",
+        "turns": 1,
+        "used_tokens": 400,
+        "velocity": null,
+        "velocity_std": null,
+        "window_effective": 1000,
+        "window_nominal": 1000,
+        "zone": "green"
+      },
+      {
+        "cache": null,
+        "effective_source": "nominal (uncalibrated)",
+        "eta_turns": null,
+        "fill_effective": 0.7,
+        "fill_nominal": 0.7,
+        "headroom_effective": 300,
+        "headroom_nominal": 300,
+        "hidden_overhead": null,
+        "model_id": "spec:model",
+        "provenance": {
+          "eta_turns": "unavailable (cold start, needs 3 turns)",
+          "used_tokens": "reported",
+          "velocity": "unavailable (cold start, needs 3 turns)",
+          "window_effective": "nominal (uncalibrated)"
+        },
+        "reserved_output": 0,
+        "schema_version": "0.1",
+        "turns": 2,
+        "used_tokens": 700,
+        "velocity": null,
+        "velocity_std": null,
+        "window_effective": 1000,
+        "window_nominal": 1000,
+        "zone": "caution"
+      },
+      {
+        "cache": null,
+        "effective_source": "nominal (uncalibrated)",
+        "eta_turns": null,
+        "fill_effective": 1.1,
+        "fill_nominal": 1.1,
+        "headroom_effective": -100,
+        "headroom_nominal": -100,
+        "hidden_overhead": null,
+        "model_id": "spec:model",
+        "provenance": {
+          "eta_turns": "exhausted (no headroom remaining)",
+          "used_tokens": "reported",
+          "velocity": "derived (ewma alpha=0.3)",
+          "window_effective": "nominal (uncalibrated)"
+        },
+        "reserved_output": 0,
+        "schema_version": "0.1",
+        "turns": 3,
+        "used_tokens": 1100,
+        "velocity": 330.0,
+        "velocity_std": 45.8257569495584,
+        "window_effective": 1000,
+        "window_nominal": 1000,
+        "zone": "critical"
+      }
+    ]
+  },
+  "profile": {
+    "effective": null,
+    "max_output": null,
+    "model_id": "spec:model",
+    "pricing": null,
+    "provider": "spec",
+    "schema_version": "0.1",
+    "source": "spec fixture",
+    "tokenizer_hint": null,
+    "window_nominal": 1000
+  },
+  "schema_version": "0.1",
+  "turns": [
+    {
+      "breakdown": null,
+      "cache_read_tokens": 0,
+      "cache_write_tokens": 0,
+      "input_tokens": 400,
+      "model_id": "spec:model",
+      "output_tokens": 0,
+      "raw": null,
+      "reasoning_tokens": 0,
+      "schema_version": "0.1",
+      "source": "reported",
+      "timestamp": "2026-07-07T00:00:01+00:00",
+      "turn_id": 1
+    },
+    {
+      "breakdown": null,
+      "cache_read_tokens": 0,
+      "cache_write_tokens": 0,
+      "input_tokens": 700,
+      "model_id": "spec:model",
+      "output_tokens": 0,
+      "raw": null,
+      "reasoning_tokens": 0,
+      "schema_version": "0.1",
+      "source": "reported",
+      "timestamp": "2026-07-07T00:00:02+00:00",
+      "turn_id": 2
+    },
+    {
+      "breakdown": null,
+      "cache_read_tokens": 0,
+      "cache_write_tokens": 0,
+      "input_tokens": 1100,
+      "model_id": "spec:model",
+      "output_tokens": 0,
+      "raw": null,
+      "reasoning_tokens": 0,
+      "schema_version": "0.1",
+      "source": "reported",
+      "timestamp": "2026-07-07T00:00:03+00:00",
+      "turn_id": 3
+    }
+  ],
+  "vector_id": "exhausted"
+}

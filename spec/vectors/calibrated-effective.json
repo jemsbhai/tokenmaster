@@ -1,0 +1,90 @@
+{
+  "config": {
+    "alpha": 0.3,
+    "caution": 0.7,
+    "critical": 0.85,
+    "reserved_output": 0,
+    "velocity_shift_factor": 1.5
+  },
+  "description": "Effective 800 under nominal 1000: fills diverge, zone keys to effective.",
+  "expected": {
+    "events": [
+      {
+        "event_type": "turn_recorded",
+        "turn_id": 1
+      },
+      {
+        "event_type": "zone_changed",
+        "fill_effective": 0.875,
+        "from_zone": "green",
+        "to_zone": "critical",
+        "turn_id": 1
+      }
+    ],
+    "states": [
+      {
+        "cache": null,
+        "effective_source": "calibration:probe-kit (spec fixture)",
+        "eta_turns": null,
+        "fill_effective": 0.875,
+        "fill_nominal": 0.7,
+        "headroom_effective": 100,
+        "headroom_nominal": 300,
+        "hidden_overhead": null,
+        "model_id": "spec:model",
+        "provenance": {
+          "eta_turns": "unavailable (cold start, needs 3 turns)",
+          "used_tokens": "reported",
+          "velocity": "unavailable (cold start, needs 3 turns)",
+          "window_effective": "calibration:probe-kit (spec fixture)"
+        },
+        "reserved_output": 0,
+        "schema_version": "0.1",
+        "turns": 1,
+        "used_tokens": 700,
+        "velocity": null,
+        "velocity_std": null,
+        "window_effective": 800,
+        "window_nominal": 1000,
+        "zone": "critical"
+      }
+    ]
+  },
+  "profile": {
+    "effective": {
+      "confidence": null,
+      "effective_context": 800,
+      "measured_at": "2026-07-01",
+      "method": "probe-kit",
+      "model_id": "spec:model",
+      "schema_version": "0.1",
+      "source": "spec fixture"
+    },
+    "max_output": null,
+    "model_id": "spec:model",
+    "pricing": null,
+    "provider": "spec",
+    "schema_version": "0.1",
+    "source": "spec fixture",
+    "tokenizer_hint": null,
+    "window_nominal": 1000
+  },
+  "schema_version": "0.1",
+  "turns": [
+    {
+      "breakdown": null,
+      "cache_read_tokens": 0,
+      "cache_write_tokens": 0,
+      "input_tokens": 700,
+      "model_id": "spec:model",
+      "output_tokens": 0,
+      "raw": null,
+      "reasoning_tokens": 0,
+      "schema_version": "0.1",
+      "source": "reported",
+      "timestamp": "2026-07-07T00:00:01+00:00",
+      "turn_id": 1
+    }
+  ],
+  "vector_id": "calibrated-effective"
+}

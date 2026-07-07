@@ -1,0 +1,266 @@
+{
+  "config": {
+    "alpha": 0.3,
+    "caution": 0.7,
+    "critical": 0.85,
+    "reserved_output": 0,
+    "velocity_shift_factor": 1.5
+  },
+  "description": "EWMA jump 100 -> 220 crosses factor 1.5.",
+  "expected": {
+    "events": [
+      {
+        "event_type": "turn_recorded",
+        "turn_id": 1
+      },
+      {
+        "event_type": "turn_recorded",
+        "turn_id": 2
+      },
+      {
+        "event_type": "turn_recorded",
+        "turn_id": 3
+      },
+      {
+        "event_type": "turn_recorded",
+        "turn_id": 4
+      },
+      {
+        "event_type": "turn_recorded",
+        "turn_id": 5
+      },
+      {
+        "current": 220.0,
+        "event_type": "velocity_shift",
+        "previous": 100.0,
+        "turn_id": 5
+      }
+    ],
+    "states": [
+      {
+        "cache": null,
+        "effective_source": "nominal (uncalibrated)",
+        "eta_turns": null,
+        "fill_effective": 0.01,
+        "fill_nominal": 0.01,
+        "headroom_effective": 99000,
+        "headroom_nominal": 99000,
+        "hidden_overhead": null,
+        "model_id": "spec:model",
+        "provenance": {
+          "eta_turns": "unavailable (cold start, needs 3 turns)",
+          "used_tokens": "reported",
+          "velocity": "unavailable (cold start, needs 3 turns)",
+          "window_effective": "nominal (uncalibrated)"
+        },
+        "reserved_output": 0,
+        "schema_version": "0.1",
+        "turns": 1,
+        "used_tokens": 1000,
+        "velocity": null,
+        "velocity_std": null,
+        "window_effective": 100000,
+        "window_nominal": 100000,
+        "zone": "green"
+      },
+      {
+        "cache": null,
+        "effective_source": "nominal (uncalibrated)",
+        "eta_turns": null,
+        "fill_effective": 0.011,
+        "fill_nominal": 0.011,
+        "headroom_effective": 98900,
+        "headroom_nominal": 98900,
+        "hidden_overhead": null,
+        "model_id": "spec:model",
+        "provenance": {
+          "eta_turns": "unavailable (cold start, needs 3 turns)",
+          "used_tokens": "reported",
+          "velocity": "unavailable (cold start, needs 3 turns)",
+          "window_effective": "nominal (uncalibrated)"
+        },
+        "reserved_output": 0,
+        "schema_version": "0.1",
+        "turns": 2,
+        "used_tokens": 1100,
+        "velocity": null,
+        "velocity_std": null,
+        "window_effective": 100000,
+        "window_nominal": 100000,
+        "zone": "green"
+      },
+      {
+        "cache": null,
+        "effective_source": "nominal (uncalibrated)",
+        "eta_turns": {
+          "conservative": 988.0,
+          "expected": 988.0
+        },
+        "fill_effective": 0.012,
+        "fill_nominal": 0.012,
+        "headroom_effective": 98800,
+        "headroom_nominal": 98800,
+        "hidden_overhead": null,
+        "model_id": "spec:model",
+        "provenance": {
+          "eta_turns": "derived",
+          "used_tokens": "reported",
+          "velocity": "derived (ewma alpha=0.3)",
+          "window_effective": "nominal (uncalibrated)"
+        },
+        "reserved_output": 0,
+        "schema_version": "0.1",
+        "turns": 3,
+        "used_tokens": 1200,
+        "velocity": 100.0,
+        "velocity_std": 0.0,
+        "window_effective": 100000,
+        "window_nominal": 100000,
+        "zone": "green"
+      },
+      {
+        "cache": null,
+        "effective_source": "nominal (uncalibrated)",
+        "eta_turns": {
+          "conservative": 987.0,
+          "expected": 987.0
+        },
+        "fill_effective": 0.013,
+        "fill_nominal": 0.013,
+        "headroom_effective": 98700,
+        "headroom_nominal": 98700,
+        "hidden_overhead": null,
+        "model_id": "spec:model",
+        "provenance": {
+          "eta_turns": "derived",
+          "used_tokens": "reported",
+          "velocity": "derived (ewma alpha=0.3)",
+          "window_effective": "nominal (uncalibrated)"
+        },
+        "reserved_output": 0,
+        "schema_version": "0.1",
+        "turns": 4,
+        "used_tokens": 1300,
+        "velocity": 100.0,
+        "velocity_std": 0.0,
+        "window_effective": 100000,
+        "window_nominal": 100000,
+        "zone": "green"
+      },
+      {
+        "cache": null,
+        "effective_source": "nominal (uncalibrated)",
+        "eta_turns": {
+          "conservative": 243.48936960901761,
+          "expected": 446.3636363636364
+        },
+        "fill_effective": 0.018,
+        "fill_nominal": 0.018,
+        "headroom_effective": 98200,
+        "headroom_nominal": 98200,
+        "hidden_overhead": null,
+        "model_id": "spec:model",
+        "provenance": {
+          "eta_turns": "derived",
+          "used_tokens": "reported",
+          "velocity": "derived (ewma alpha=0.3)",
+          "window_effective": "nominal (uncalibrated)"
+        },
+        "reserved_output": 0,
+        "schema_version": "0.1",
+        "turns": 5,
+        "used_tokens": 1800,
+        "velocity": 220.0,
+        "velocity_std": 183.3030277982336,
+        "window_effective": 100000,
+        "window_nominal": 100000,
+        "zone": "green"
+      }
+    ]
+  },
+  "profile": {
+    "effective": null,
+    "max_output": null,
+    "model_id": "spec:model",
+    "pricing": null,
+    "provider": "spec",
+    "schema_version": "0.1",
+    "source": "spec fixture",
+    "tokenizer_hint": null,
+    "window_nominal": 100000
+  },
+  "schema_version": "0.1",
+  "turns": [
+    {
+      "breakdown": null,
+      "cache_read_tokens": 0,
+      "cache_write_tokens": 0,
+      "input_tokens": 1000,
+      "model_id": "spec:model",
+      "output_tokens": 0,
+      "raw": null,
+      "reasoning_tokens": 0,
+      "schema_version": "0.1",
+      "source": "reported",
+      "timestamp": "2026-07-07T00:00:01+00:00",
+      "turn_id": 1
+    },
+    {
+      "breakdown": null,
+      "cache_read_tokens": 0,
+      "cache_write_tokens": 0,
+      "input_tokens": 1100,
+      "model_id": "spec:model",
+      "output_tokens": 0,
+      "raw": null,
+      "reasoning_tokens": 0,
+      "schema_version": "0.1",
+      "source": "reported",
+      "timestamp": "2026-07-07T00:00:02+00:00",
+      "turn_id": 2
+    },
+    {
+      "breakdown": null,
+      "cache_read_tokens": 0,
+      "cache_write_tokens": 0,
+      "input_tokens": 1200,
+      "model_id": "spec:model",
+      "output_tokens": 0,
+      "raw": null,
+      "reasoning_tokens": 0,
+      "schema_version": "0.1",
+      "source": "reported",
+      "timestamp": "2026-07-07T00:00:03+00:00",
+      "turn_id": 3
+    },
+    {
+      "breakdown": null,
+      "cache_read_tokens": 0,
+      "cache_write_tokens": 0,
+      "input_tokens": 1300,
+      "model_id": "spec:model",
+      "output_tokens": 0,
+      "raw": null,
+      "reasoning_tokens": 0,
+      "schema_version": "0.1",
+      "source": "reported",
+      "timestamp": "2026-07-07T00:00:04+00:00",
+      "turn_id": 4
+    },
+    {
+      "breakdown": null,
+      "cache_read_tokens": 0,
+      "cache_write_tokens": 0,
+      "input_tokens": 1800,
+      "model_id": "spec:model",
+      "output_tokens": 0,
+      "raw": null,
+      "reasoning_tokens": 0,
+      "schema_version": "0.1",
+      "source": "reported",
+      "timestamp": "2026-07-07T00:00:05+00:00",
+      "turn_id": 5
+    }
+  ],
+  "vector_id": "velocity-shift"
+}
