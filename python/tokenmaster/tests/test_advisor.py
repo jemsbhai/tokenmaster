@@ -6,6 +6,7 @@ from tokenmaster import (
     Action,
     AdvisorRecommendation,
     Meter,
+    PredictivePolicy,
     Recommendation,
     TaskContext,
     TaskCriticality,
@@ -117,3 +118,81 @@ def test_custom_policy_injection():
 def test_threshold_policy_validation():
     with pytest.raises(ValueError):
         ThresholdPolicy(warn_at=0.9, compact_at=0.8)
+
+
+def steady_meter(totals, window=100_000):
+    m = Meter(profile(window=window))
+    for total in totals:
+        m.record({"input_tokens": total})
+    return m
+
+
+def test_predictive_continue_when_coverage_ample():
+    # velocity 100, used 1300, headroom 98700 -> conservative eta 987
+    m = steady_meter((1_000, 1_100, 1_200, 1_300))
+    rec = m.advise(
+        TaskContext(expected_remaining_turns=10),
+        policy=PredictivePolicy(),
+    )
+    assert rec.action is Action.CONTINUE
+    assert rec.urgency is Urgency.NONE
+    assert "covers horizon 10" in rec.rationale.comparison
+    assert rec.rationale.derived["required_turns"] == 13
+    assert rec.rationale.derived["projected_used_at_horizon"] == 2_300
+
+
+def test_predictive_acts_now_when_eta_below_horizon():
+    m = steady_meter((1_000, 1_100, 1_200, 1_300))
+    rec = m.advise(
+        TaskContext(expected_remaining_turns=2_000),
+        policy=PredictivePolicy(),
+    )
+    assert rec.action is Action.COMPACT
+    assert rec.urgency is Urgency.NOW
+    assert "< horizon 2000" in rec.rationale.comparison
+
+
+def test_predictive_soon_when_buffer_margin_eaten():
+    # conservative eta 987.0; horizon 985 -> covers task, eats the buffer
+    m = steady_meter((1_000, 1_100, 1_200, 1_300))
+    rec = m.advise(
+        TaskContext(expected_remaining_turns=985),
+        policy=PredictivePolicy(buffer_turns=3),
+    )
+    assert rec.action is Action.COMPACT
+    assert rec.urgency is Urgency.SOON
+
+
+def test_predictive_without_horizon_guards_buffer():
+    # velocity 200, used 800, headroom 200 -> conservative eta 1.0
+    m = steady_meter((400, 600, 800), window=1_000)
+    rec = m.advise(policy=PredictivePolicy(buffer_turns=3))
+    assert rec.action is Action.COMPACT
+    assert rec.urgency is Urgency.NOW
+    assert "horizon unknown" in rec.rationale.comparison
+
+
+def test_predictive_cold_start_delegates_to_fallback():
+    m = Meter(profile(window=1_000))
+    m.record({"input_tokens": 900})
+    rec = m.advise(policy=PredictivePolicy())
+    assert rec.policy_id == "predictive"
+    assert rec.rationale.derived["delegated_to"] == "threshold"
+    assert rec.action is Action.COMPACT
+    assert rec.urgency is Urgency.NOW
+    assert "delegated to threshold" in rec.rationale.comparison
+
+
+def test_predictive_exhausted_headroom_acts_now():
+    m = steady_meter((400, 700, 1_100), window=1_000)
+    rec = m.advise(policy=PredictivePolicy())
+    assert rec.action is Action.COMPACT
+    assert rec.urgency is Urgency.NOW
+    assert "exhausted" in rec.rationale.comparison
+
+
+def test_predictive_parameter_validation():
+    with pytest.raises(ValueError):
+        PredictivePolicy(buffer_turns=-1)
+    with pytest.raises(ValueError):
+        PredictivePolicy(soon_factor=0.5)

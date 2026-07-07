@@ -213,6 +213,151 @@ class ThresholdPolicy:
         )
 
 
+class PredictivePolicy:
+    """Fuel-gauge policy: act when projected range no longer covers the task.
+
+    Compares eta_turns.conservative against the task horizon
+    (expected_remaining_turns) plus a safety buffer. Without a horizon it
+    guards the buffer alone: running within buffer_turns of exhaustion is
+    act-now territory regardless of the task. When no prediction exists
+    (cold start, non-positive velocity) it delegates to a fallback policy,
+    ThresholdPolicy by default, and says so in the rationale.
+
+    buffer_turns (provisional default 3) and soon_factor (provisional
+    default 2.0) await measurement; task_criticality is recorded in the
+    rationale but not yet weighted, deliberately, until experiments say how.
+    Like the baseline, this policy knows when to act, not what acting costs,
+    so every effect estimate stays None; costing is CostModelPolicy's job.
+    """
+
+    def __init__(
+        self,
+        *,
+        buffer_turns: int = 3,
+        soon_factor: float = 2.0,
+        fallback: Policy | None = None,
+    ) -> None:
+        if buffer_turns < 0:
+            raise ValueError("buffer_turns must be non-negative")
+        if soon_factor < 1.0:
+            raise ValueError("soon_factor must be at least 1")
+        self.buffer_turns = buffer_turns
+        self.soon_factor = soon_factor
+        self.fallback: Policy = fallback or ThresholdPolicy()
+        self.policy_id = "predictive"
+
+    def evaluate(
+        self, state: MeterState, task: TaskContext | None = None
+    ) -> Recommendation:
+        eta = state.eta_turns
+        horizon = task.expected_remaining_turns if task else None
+        inputs: dict[str, Any] = {
+            "fill_effective": state.fill_effective,
+            "headroom_effective": state.headroom_effective,
+            "conservative_eta": eta.conservative if eta else None,
+            "expected_eta": eta.expected if eta else None,
+            "horizon": horizon,
+            "buffer_turns": self.buffer_turns,
+            "soon_factor": self.soon_factor,
+            "task_criticality": task.task_criticality.value if task else None,
+        }
+
+        if state.headroom_effective <= 0:
+            return Recommendation(
+                action=Action.COMPACT,
+                urgency=Urgency.NOW,
+                rationale=RationaleTrace(
+                    inputs=inputs,
+                    comparison=(
+                        f"headroom_effective {state.headroom_effective} <= 0 "
+                        "(exhausted)"
+                    ),
+                ),
+                expected=EffectEstimate(),
+                policy_id=self.policy_id,
+            )
+
+        if eta is None:
+            reason = state.provenance.get("eta_turns", "eta unavailable")
+            base = self.fallback.evaluate(state, task)
+            return Recommendation(
+                action=base.action,
+                urgency=base.urgency,
+                rationale=RationaleTrace(
+                    inputs=inputs,
+                    derived={
+                        "delegated_to": self.fallback.policy_id,
+                        "reason": reason,
+                        "fallback_comparison": base.rationale.comparison,
+                    },
+                    comparison=(
+                        f"prediction unavailable ({reason}); "
+                        f"delegated to {self.fallback.policy_id}"
+                    ),
+                ),
+                expected=base.expected,
+                policy_id=self.policy_id,
+            )
+
+        conservative = eta.conservative
+        derived: dict[str, Any] = {}
+        if horizon is not None and state.velocity is not None:
+            derived["projected_used_at_horizon"] = int(
+                state.used_tokens + horizon * state.velocity
+            )
+
+        if horizon is not None:
+            required = horizon + self.buffer_turns
+            derived["required_turns"] = required
+            if conservative < horizon:
+                action, urgency = Action.COMPACT, Urgency.NOW
+                comparison = (
+                    f"conservative eta {conservative:.1f} < horizon {horizon}"
+                )
+            elif conservative < required:
+                action, urgency = Action.COMPACT, Urgency.SOON
+                comparison = (
+                    f"conservative eta {conservative:.1f} < horizon {horizon} "
+                    f"+ buffer {self.buffer_turns}"
+                )
+            else:
+                action, urgency = Action.CONTINUE, Urgency.NONE
+                comparison = (
+                    f"conservative eta {conservative:.1f} covers horizon "
+                    f"{horizon} + buffer {self.buffer_turns}"
+                )
+        else:
+            soon_band = self.buffer_turns * self.soon_factor
+            if conservative <= self.buffer_turns:
+                action, urgency = Action.COMPACT, Urgency.NOW
+                comparison = (
+                    f"conservative eta {conservative:.1f} <= buffer "
+                    f"{self.buffer_turns} (horizon unknown)"
+                )
+            elif conservative <= soon_band:
+                action, urgency = Action.COMPACT, Urgency.SOON
+                comparison = (
+                    f"conservative eta {conservative:.1f} <= buffer band "
+                    f"{soon_band:.1f} (horizon unknown)"
+                )
+            else:
+                action, urgency = Action.CONTINUE, Urgency.NONE
+                comparison = (
+                    f"conservative eta {conservative:.1f} exceeds buffer band "
+                    f"{soon_band:.1f} (horizon unknown)"
+                )
+
+        return Recommendation(
+            action=action,
+            urgency=urgency,
+            rationale=RationaleTrace(
+                inputs=inputs, derived=derived, comparison=comparison
+            ),
+            expected=EffectEstimate(),
+            policy_id=self.policy_id,
+        )
+
+
 __all__ = [
     "Action",
     "Urgency",
@@ -223,4 +368,5 @@ __all__ = [
     "Recommendation",
     "Policy",
     "ThresholdPolicy",
+    "PredictivePolicy",
 ]
