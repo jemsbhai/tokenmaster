@@ -40,11 +40,13 @@ from .events import (
     AdvisorRecommendation,
     Event,
     EventCallback,
+    HandoffEvaluated,
     ModelChanged,
     TurnRecorded,
     VelocityShift,
     ZoneChanged,
 )
+from .fidelity import FidelityReport
 from .types import (
     SCHEMA_VERSION,
     CacheState,
@@ -243,6 +245,20 @@ class Meter:
             )
         )
         return recommendation
+
+    def report_handoff(self, report: FidelityReport) -> None:
+        """Emit a HandoffEvaluated event carrying a fidelity report.
+
+        The evaluation itself is meter-independent (see tokenmaster.fidelity);
+        this method exists so visualizers subscribed to the meter's stream
+        see handoff scores alongside everything else.
+        """
+        self._emit(
+            HandoffEvaluated(
+                turn_id=self._turns[-1].turn_id if self._turns else None,
+                report=report,
+            )
+        )
 
     # ------------------------------------------------------------------ #
     # state

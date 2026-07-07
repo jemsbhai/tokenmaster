@@ -20,6 +20,7 @@ from datetime import datetime, timezone
 from typing import Any, Callable, ClassVar, Mapping
 
 from .advisor import Recommendation
+from .fidelity import FidelityReport
 from .types import SCHEMA_VERSION, MeterState, TurnUsage, Zone
 
 
@@ -168,6 +169,22 @@ class AdvisorRecommendation(Event):
         }
 
 
+@dataclass(frozen=True, kw_only=True)
+class HandoffEvaluated(Event):
+    """A handoff artifact was scored; carries the full fidelity report."""
+
+    EVENT_TYPE: ClassVar[str] = "handoff_evaluated"
+
+    report: FidelityReport
+
+    def payload(self) -> dict[str, Any]:
+        return {"report": self.report.to_dict()}
+
+    @classmethod
+    def _from_payload(cls, payload: Mapping[str, Any]) -> dict[str, Any]:
+        return {"report": FidelityReport.from_dict(payload["report"])}
+
+
 _EVENT_TYPES: dict[str, type[Event]] = {
     cls.EVENT_TYPE: cls
     for cls in (
@@ -176,6 +193,7 @@ _EVENT_TYPES: dict[str, type[Event]] = {
         VelocityShift,
         ModelChanged,
         AdvisorRecommendation,
+        HandoffEvaluated,
     )
 }
 
@@ -204,5 +222,6 @@ __all__ = [
     "VelocityShift",
     "ModelChanged",
     "AdvisorRecommendation",
+    "HandoffEvaluated",
     "event_from_dict",
 ]
