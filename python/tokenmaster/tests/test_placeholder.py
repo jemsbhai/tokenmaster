@@ -11,5 +11,5 @@ def test_about_returns_expected_metadata():
     info = tokenmaster.about()
     assert info["name"] == "tokenmaster"
     assert info["version"] == tokenmaster.__version__
-    assert info["status"] == "placeholder"
+    assert info["status"] == "pre-release"
     assert "ctxmaster" in info["companion"]

@@ -1,16 +1,47 @@
 """tokenmaster: core context-budget metering and decision engine for LLM applications.
 
-Placeholder release (0.0.1) reserving the package name while the core API is
-designed. Do not build against this version.
+Pre-release: the data model and Meter computation implement docs/core-api.md
+(contract 0.1). Registry, events, advisor policies, and the fidelity protocol
+land in subsequent versions; the public surface may still shift before 0.1.0.
 """
+
+from .meter import Meter
+from .types import (
+    SCHEMA_VERSION,
+    Breakdown,
+    CacheState,
+    CalibrationRecord,
+    EtaEstimate,
+    MeterState,
+    ModelProfile,
+    Pricing,
+    TurnUsage,
+    UsageSource,
+    Zone,
+)
 
 __version__ = "0.0.1"
 
-__all__ = ["about", "__version__"]
+__all__ = [
+    "Meter",
+    "SCHEMA_VERSION",
+    "Breakdown",
+    "CacheState",
+    "CalibrationRecord",
+    "EtaEstimate",
+    "MeterState",
+    "ModelProfile",
+    "Pricing",
+    "TurnUsage",
+    "UsageSource",
+    "Zone",
+    "about",
+    "__version__",
+]
 
 
 def about() -> dict:
-    """Return basic project metadata for this placeholder release."""
+    """Return basic project metadata."""
     return {
         "name": "tokenmaster",
         "version": __version__,
@@ -20,5 +51,5 @@ def about() -> dict:
         ),
         "companion": "ctxmaster (visualization layer)",
         "repository": "https://github.com/jemsbhai/tokenmaster",
-        "status": "placeholder",
+        "status": "pre-release",
     }
