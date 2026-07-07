@@ -1,10 +1,28 @@
-"""Tests for the advisor framework and the ThresholdPolicy baseline."""
+"""Tests for the advisor framework: ThresholdPolicy, PredictivePolicy,
+CostModelPolicy.
+
+CostModelPolicy reference numbers. Pricing per Mtok: in 2.0, out 10.0,
+cache_read 0.2, cache_write 2.5 (per token: 2e-6, 1e-5, 2e-7, 2.5e-6).
+Meter: window 1,000,000; totals 97k, 98k, 99k, 100k -> velocity 1,000,
+used T_pre = 100,000, eta expected = 900.
+Ratios (defaults): T_post 15,000; T_sum 10,000; T_hand 5,000.
+
+  one_time_compact = 10,000*1e-5 + 15,000*(2.5e-6 - 2e-7) = 0.1345
+  saving_per_turn  = 85,000*2e-7 = 0.017
+  k*               = 0.1345 / 0.017 = 7.9118
+  info_compact     = 0.10*100,000*2e-6 = 0.02
+  net_compact(k)   = 0.1545 - 0.017k
+  one_time_handoff = 5,000*1e-5 + 5,000*2.3e-6 = 0.0615
+  info_handoff     = 0.20*100,000*2e-6 = 0.04
+  net_handoff(k)   = 0.1015 + friction - 0.019k
+"""
 
 import pytest
 
 from tokenmaster import (
     Action,
     AdvisorRecommendation,
+    CostModelPolicy,
     Meter,
     PredictivePolicy,
     Recommendation,
@@ -14,7 +32,7 @@ from tokenmaster import (
     Urgency,
     event_from_dict,
 )
-from tokenmaster.types import ModelProfile
+from tokenmaster.types import ModelProfile, Pricing
 
 
 def profile(window=1_000):
@@ -196,3 +214,121 @@ def test_predictive_parameter_validation():
         PredictivePolicy(buffer_turns=-1)
     with pytest.raises(ValueError):
         PredictivePolicy(soon_factor=0.5)
+
+
+# --------------------------------------------------------------------- #
+# CostModelPolicy
+
+PRICING = Pricing(
+    input=2.0, output=10.0, cache_read=0.2, cache_write=2.5, as_of="2026-07-07"
+)
+
+
+def cost_meter(window=1_000_000):
+    m = Meter(
+        ModelProfile(
+            model_id="test:model", provider="test", window_nominal=window
+        )
+    )
+    for total in (97_000, 98_000, 99_000, 100_000):
+        m.record({"input_tokens": total})
+    return m
+
+
+def test_cost_model_k_star_matches_contract_formula():
+    rec = cost_meter().advise(
+        TaskContext(expected_remaining_turns=3),
+        policy=CostModelPolicy(pricing=PRICING),
+    )
+    assert rec.rationale.derived["k_star"] == pytest.approx(0.1345 / 0.017)
+    assert rec.rationale.derived["k_star_with_info"] == pytest.approx(
+        0.1545 / 0.017
+    )
+
+
+def test_cost_model_continue_below_break_even():
+    rec = cost_meter().advise(
+        TaskContext(expected_remaining_turns=3),
+        policy=CostModelPolicy(pricing=PRICING),
+    )
+    assert rec.action is Action.CONTINUE
+    assert rec.urgency is Urgency.NONE
+    assert rec.expected.cost_delta == 0.0
+    assert rec.rationale.derived["net_compact"] == pytest.approx(
+        0.1545 - 3 * 0.017
+    )
+
+
+def test_cost_model_handoff_wins_long_horizon_zero_friction():
+    rec = cost_meter().advise(
+        TaskContext(expected_remaining_turns=20),
+        policy=CostModelPolicy(pricing=PRICING),
+    )
+    assert rec.action is Action.HANDOFF
+    assert rec.urgency is Urgency.SOON
+    assert rec.expected.cost_delta == pytest.approx(0.1015 - 20 * 0.019)
+    assert rec.expected.fidelity_risk == pytest.approx(0.20)
+    assert rec.expected.tokens_freed == 95_000
+
+
+def test_cost_model_friction_flips_choice_to_compact():
+    rec = cost_meter().advise(
+        TaskContext(expected_remaining_turns=20),
+        policy=CostModelPolicy(pricing=PRICING, human_friction=0.5),
+    )
+    assert rec.action is Action.COMPACT
+    assert rec.expected.cost_delta == pytest.approx(0.1545 - 20 * 0.017)
+    assert rec.expected.tokens_spent == 10_000
+    assert rec.expected.tokens_freed == 85_000
+    assert rec.expected.fidelity_risk == pytest.approx(0.10)
+
+
+def test_cost_model_overflow_within_horizon_forces_action_now():
+    # window 105,000 -> headroom 5,000, eta expected 5 < k=20
+    rec = cost_meter(window=105_000).advise(
+        TaskContext(expected_remaining_turns=20),
+        policy=CostModelPolicy(pricing=PRICING),
+    )
+    assert rec.action is not Action.CONTINUE
+    assert rec.urgency is Urgency.NOW
+    assert rec.rationale.derived["overflow_within_horizon"] is True
+    assert "infeasible" in rec.rationale.comparison
+
+
+def test_cost_model_exhausted_picks_cheaper_action_now():
+    rec = cost_meter(window=90_000).advise(
+        policy=CostModelPolicy(pricing=PRICING),
+    )
+    assert rec.action is not Action.CONTINUE
+    assert rec.urgency is Urgency.NOW
+    assert rec.rationale.derived["exhausted"] is True
+
+
+def test_cost_model_without_pricing_uses_unit_ledger():
+    rec = cost_meter().advise(
+        TaskContext(expected_remaining_turns=20),
+        policy=CostModelPolicy(),
+    )
+    assert rec.rationale.derived["ledger_unit"] == "token-units"
+    assert "token-units" in rec.rationale.comparison
+    assert rec.action is not None
+
+
+def test_cost_model_cold_start_delegates():
+    m = Meter(profile(window=1_000))
+    m.record({"input_tokens": 900})
+    rec = m.advise(policy=CostModelPolicy(pricing=PRICING))
+    assert rec.policy_id == "cost-model"
+    assert rec.rationale.derived["delegated_to"] == "threshold"
+    assert rec.action is Action.COMPACT
+
+
+def test_cost_model_parameter_validation():
+    with pytest.raises(ValueError):
+        CostModelPolicy(compaction_ratio=0.0)
+    with pytest.raises(ValueError):
+        CostModelPolicy(expected_handoff_loss=1.5)
+    with pytest.raises(ValueError):
+        CostModelPolicy(human_friction=-0.1)
+    with pytest.raises(ValueError):
+        CostModelPolicy(default_horizon=0)

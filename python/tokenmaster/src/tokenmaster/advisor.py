@@ -358,6 +358,247 @@ class PredictivePolicy:
         )
 
 
+_UNIT_PRICES = (1.0, 5.0, 0.1, 1.25)  # in, out, cache_read, cache_write
+
+
+class CostModelPolicy:
+    """Choose the action minimizing expected cost (contract section 5.2).
+
+    Computes net costs of compact and handoff relative to continuing over a
+    horizon of k turns, including the cache economics of the aftermath: the
+    one-time summary generation and prefix rewrite versus the per-turn
+    cache-read savings of a smaller prefix. The break-even horizon
+
+        k* = (T_sum*p_out + T_post*(p_cw - p_cr)) / ((T_pre - T_post)*p_cr)
+
+    is reported in every rationale; below k* remaining turns, compaction
+    loses money before information loss is even counted. Per-turn context
+    growth cancels between branches (both paths grow identically), so the
+    savings term is exact under the equal-growth assumption.
+
+    Prices come from a Pricing (per-Mtok, converted internally to per-token)
+    or, when absent, from provisional unit ratios (in 1.0, out 5.0, cache
+    read 0.1, cache write 1.25 per token) with the ledger unit reported as
+    "token-units" instead of a currency. All ratios and loss parameters are
+    provisional pending experiments E3 and E4 and are recorded in the
+    rationale inputs. With no prediction available (cold start), the policy
+    delegates to a fallback and says so; with no headroom, it picks the
+    cheaper of compact and handoff at urgency now.
+    """
+
+    def __init__(
+        self,
+        *,
+        pricing: Pricing | None = None,
+        compaction_ratio: float = 0.15,
+        summary_output_ratio: float = 0.10,
+        handoff_prompt_ratio: float = 0.05,
+        expected_compaction_loss: float = 0.10,
+        expected_handoff_loss: float = 0.20,
+        human_friction: float = 0.0,
+        default_horizon: int = 10,
+        fallback: Policy | None = None,
+    ) -> None:
+        for name, value in (
+            ("compaction_ratio", compaction_ratio),
+            ("summary_output_ratio", summary_output_ratio),
+            ("handoff_prompt_ratio", handoff_prompt_ratio),
+        ):
+            if not 0.0 < value < 1.0:
+                raise ValueError(f"{name} must be in (0, 1)")
+        for name, value in (
+            ("expected_compaction_loss", expected_compaction_loss),
+            ("expected_handoff_loss", expected_handoff_loss),
+        ):
+            if not 0.0 <= value <= 1.0:
+                raise ValueError(f"{name} must be in [0, 1]")
+        if human_friction < 0:
+            raise ValueError("human_friction must be non-negative")
+        if default_horizon < 1:
+            raise ValueError("default_horizon must be at least 1")
+        self.pricing = pricing
+        self.compaction_ratio = compaction_ratio
+        self.summary_output_ratio = summary_output_ratio
+        self.handoff_prompt_ratio = handoff_prompt_ratio
+        self.expected_compaction_loss = expected_compaction_loss
+        self.expected_handoff_loss = expected_handoff_loss
+        self.human_friction = human_friction
+        self.default_horizon = default_horizon
+        self.fallback: Policy = fallback or ThresholdPolicy()
+        self.policy_id = "cost-model"
+
+    @classmethod
+    def for_profile(cls, profile: ModelProfile, **kwargs: Any) -> "CostModelPolicy":
+        """Construct with the profile's dated pricing (None degrades to units)."""
+        return cls(pricing=profile.pricing, **kwargs)
+
+    def _per_token_prices(self) -> tuple[float, float, float, float, str]:
+        if self.pricing is not None:
+            p = self.pricing
+            return (
+                p.input / 1e6,
+                p.output / 1e6,
+                p.cache_read / 1e6,
+                p.cache_write / 1e6,
+                p.currency,
+            )
+        i, o, cr, cw = _UNIT_PRICES
+        return i, o, cr, cw, "token-units"
+
+    def evaluate(
+        self, state: MeterState, task: TaskContext | None = None
+    ) -> Recommendation:
+        p_in, p_out, p_cr, p_cw, unit = self._per_token_prices()
+        horizon = task.expected_remaining_turns if task else None
+        horizon_source = "task" if horizon is not None else "default"
+        k = horizon if horizon is not None else self.default_horizon
+
+        t_pre = state.used_tokens
+        t_post = int(t_pre * self.compaction_ratio)
+        t_sum = int(t_pre * self.summary_output_ratio)
+        t_hand = int(t_pre * self.handoff_prompt_ratio)
+
+        inputs: dict[str, Any] = {
+            "t_pre": t_pre,
+            "velocity": state.velocity,
+            "horizon": k,
+            "horizon_source": horizon_source,
+            "prices_per_mtok": (
+                self.pricing.to_dict() if self.pricing else "unit ratios (provisional)"
+            ),
+            "compaction_ratio": self.compaction_ratio,
+            "summary_output_ratio": self.summary_output_ratio,
+            "handoff_prompt_ratio": self.handoff_prompt_ratio,
+            "expected_compaction_loss": self.expected_compaction_loss,
+            "expected_handoff_loss": self.expected_handoff_loss,
+            "human_friction": self.human_friction,
+            "task_criticality": task.task_criticality.value if task else None,
+        }
+
+        exhausted = state.headroom_effective <= 0
+        if state.eta_turns is None and not exhausted:
+            reason = state.provenance.get("eta_turns", "eta unavailable")
+            base = self.fallback.evaluate(state, task)
+            return Recommendation(
+                action=base.action,
+                urgency=base.urgency,
+                rationale=RationaleTrace(
+                    inputs=inputs,
+                    derived={
+                        "delegated_to": self.fallback.policy_id,
+                        "reason": reason,
+                        "fallback_comparison": base.rationale.comparison,
+                    },
+                    comparison=(
+                        f"prediction unavailable ({reason}); "
+                        f"delegated to {self.fallback.policy_id}"
+                    ),
+                ),
+                expected=base.expected,
+                policy_id=self.policy_id,
+            )
+
+        saving_per_turn_compact = (t_pre - t_post) * p_cr
+        saving_per_turn_handoff = (t_pre - t_hand) * p_cr
+        one_time_compact = t_sum * p_out + t_post * (p_cw - p_cr)
+        one_time_handoff = t_hand * p_out + t_hand * (p_cw - p_cr)
+        info_compact = self.expected_compaction_loss * t_pre * p_in
+        info_handoff = self.expected_handoff_loss * t_pre * p_in
+
+        k_star = (
+            one_time_compact / saving_per_turn_compact
+            if saving_per_turn_compact > 0
+            else None
+        )
+        k_star_with_info = (
+            (one_time_compact + info_compact) / saving_per_turn_compact
+            if saving_per_turn_compact > 0
+            else None
+        )
+
+        net_compact = one_time_compact + info_compact - k * saving_per_turn_compact
+        net_handoff = (
+            one_time_handoff
+            + info_handoff
+            + self.human_friction
+            - k * saving_per_turn_handoff
+        )
+
+        overflow = (
+            not exhausted
+            and state.eta_turns is not None
+            and state.eta_turns.expected < k
+        )
+        continue_feasible = not exhausted and not overflow
+        net_continue = 0.0 if continue_feasible else None
+
+        candidates: dict[Action, float] = {
+            Action.COMPACT: net_compact,
+            Action.HANDOFF: net_handoff,
+        }
+        if continue_feasible:
+            candidates[Action.CONTINUE] = 0.0
+        action = min(candidates, key=candidates.__getitem__)
+        chosen_net = candidates[action]
+
+        if action is Action.CONTINUE:
+            urgency = Urgency.NONE
+            expected = EffectEstimate(
+                tokens_spent=0, tokens_freed=0, cost_delta=0.0, fidelity_risk=0.0
+            )
+        else:
+            urgency = Urgency.NOW if not continue_feasible else Urgency.SOON
+            if action is Action.COMPACT:
+                expected = EffectEstimate(
+                    tokens_spent=t_sum,
+                    tokens_freed=t_pre - t_post,
+                    cost_delta=chosen_net,
+                    fidelity_risk=self.expected_compaction_loss,
+                )
+            else:
+                expected = EffectEstimate(
+                    tokens_spent=t_hand,
+                    tokens_freed=t_pre - t_hand,
+                    cost_delta=chosen_net,
+                    fidelity_risk=self.expected_handoff_loss,
+                )
+
+        continue_text = (
+            f"{net_continue:+.4f}" if net_continue is not None else "infeasible"
+        )
+        comparison = (
+            f"min over k={k}: continue {continue_text}, "
+            f"compact {net_compact:+.4f}, handoff {net_handoff:+.4f} {unit} "
+            f"-> {action.value}"
+        )
+
+        return Recommendation(
+            action=action,
+            urgency=urgency,
+            rationale=RationaleTrace(
+                inputs=inputs,
+                derived={
+                    "ledger_unit": unit,
+                    "k_star": k_star,
+                    "k_star_with_info": k_star_with_info,
+                    "net_compact": net_compact,
+                    "net_handoff": net_handoff,
+                    "one_time_compact": one_time_compact,
+                    "one_time_handoff": one_time_handoff,
+                    "saving_per_turn_compact": saving_per_turn_compact,
+                    "overflow_within_horizon": overflow,
+                    "exhausted": exhausted,
+                    "t_post": t_post,
+                    "t_sum": t_sum,
+                    "t_hand": t_hand,
+                },
+                comparison=comparison,
+            ),
+            expected=expected,
+            policy_id=self.policy_id,
+        )
+
+
 __all__ = [
     "Action",
     "Urgency",
@@ -369,4 +610,5 @@ __all__ = [
     "Policy",
     "ThresholdPolicy",
     "PredictivePolicy",
+    "CostModelPolicy",
 ]

@@ -7,6 +7,7 @@ land in subsequent versions; the public surface may still shift before 0.1.0.
 
 from .advisor import (
     Action,
+    CostModelPolicy,
     EffectEstimate,
     Policy,
     PredictivePolicy,
@@ -56,6 +57,7 @@ __all__ = [
     "Policy",
     "ThresholdPolicy",
     "PredictivePolicy",
+    "CostModelPolicy",
     "Event",
     "AdvisorRecommendation",
     "TurnRecorded",
