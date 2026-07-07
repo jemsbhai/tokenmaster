@@ -1,0 +1,41 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "ctxmaster"
+version = "0.0.1"
+description = "Visualization layer for tokenmaster: CLI, terminal gauge, and dashboard renderers for LLM context-budget metering. Placeholder release."
+readme = "README.md"
+requires-python = ">=3.10"
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [
+  { name = "Muntaser Syed", email = "jemsbhai@gmail.com" },
+]
+keywords = [
+  "llm",
+  "tokens",
+  "context-window",
+  "visualization",
+  "terminal",
+  "gauge",
+  "dashboard",
+]
+classifiers = [
+  "Development Status :: 1 - Planning",
+  "Intended Audience :: Developers",
+  "Programming Language :: Python :: 3",
+  "Topic :: Scientific/Engineering :: Artificial Intelligence",
+  "Topic :: Software Development :: Libraries",
+]
+dependencies = [
+  "tokenmaster>=0.0.1",
+]
+
+[project.urls]
+Homepage = "https://github.com/jemsbhai/tokenmaster"
+Repository = "https://github.com/jemsbhai/tokenmaster"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/ctxmaster"]

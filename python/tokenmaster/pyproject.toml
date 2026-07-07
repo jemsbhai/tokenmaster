@@ -1,0 +1,38 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "tokenmaster"
+version = "0.0.1"
+description = "Core context-budget metering and decision engine for LLM applications: normalized token accounting, effective-budget gauges, turns-to-exhaustion prediction, and compaction/handoff decisions. Placeholder release."
+readme = "README.md"
+requires-python = ">=3.10"
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [
+  { name = "Muntaser Syed", email = "jemsbhai@gmail.com" },
+]
+keywords = [
+  "llm",
+  "tokens",
+  "context-window",
+  "context-management",
+  "compaction",
+  "continuation-prompt",
+  "metering",
+]
+classifiers = [
+  "Development Status :: 1 - Planning",
+  "Intended Audience :: Developers",
+  "Programming Language :: Python :: 3",
+  "Topic :: Scientific/Engineering :: Artificial Intelligence",
+  "Topic :: Software Development :: Libraries",
+]
+
+[project.urls]
+Homepage = "https://github.com/jemsbhai/tokenmaster"
+Repository = "https://github.com/jemsbhai/tokenmaster"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/tokenmaster"]

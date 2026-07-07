@@ -1,0 +1,30 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+.venv/
+venv/
+test_env/
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Node (future packages)
+node_modules/
+
+# Rust (future crates)
+target/
+
+# Secrets and local environment
+.env
+.env.local
+*.key
+*secrets*
+
+# OS and editors
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
