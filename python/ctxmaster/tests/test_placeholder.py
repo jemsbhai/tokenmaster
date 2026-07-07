@@ -12,4 +12,4 @@ def test_about_reports_core_version():
     info = ctxmaster.about()
     assert info["name"] == "ctxmaster"
     assert tokenmaster.__version__ in info["core"]
-    assert info["status"] == "placeholder"
+    assert info["status"] == "pre-release"

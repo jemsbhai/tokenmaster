@@ -1,18 +1,21 @@
 """ctxmaster: visualization layer for tokenmaster.
 
-Placeholder release (0.0.1) reserving the package name while the core API is
-designed. Do not build against this version.
+Pre-release: the terminal context gauge (hero surface per contract decision
+D10) is implemented; CLI and dashboard surfaces land in subsequent versions.
+The public surface may still shift before 0.1.0.
 """
 
 import tokenmaster
 
+from .gauge import ContextGauge
+
 __version__ = "0.0.1"
 
-__all__ = ["about", "__version__"]
+__all__ = ["ContextGauge", "about", "__version__"]
 
 
 def about() -> dict:
-    """Return basic project metadata for this placeholder release."""
+    """Return basic project metadata."""
     return {
         "name": "ctxmaster",
         "version": __version__,
@@ -22,5 +25,5 @@ def about() -> dict:
         ),
         "core": f"tokenmaster {tokenmaster.__version__}",
         "repository": "https://github.com/jemsbhai/tokenmaster",
-        "status": "placeholder",
+        "status": "pre-release",
     }
