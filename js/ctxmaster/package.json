@@ -1,22 +1,47 @@
 {
   "name": "ctxmaster",
   "version": "0.0.1",
-  "description": "Visualization layer for tokenmaster: CLI, terminal gauge, and dashboard renderers for LLM context-budget metering. Placeholder release.",
-  "main": "index.js",
+  "description": "Terminal context gauge and visualization layer for tokenmaster: zone-colored budget bar, token velocity, and turns-to-exhaustion for LLM context windows.",
+  "type": "commonjs",
+  "main": "./dist/cjs/index.js",
+  "module": "./dist/esm/index.js",
+  "types": "./dist/cjs/index.d.ts",
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./dist/esm/index.d.ts",
+        "default": "./dist/esm/index.js"
+      },
+      "require": {
+        "types": "./dist/cjs/index.d.ts",
+        "default": "./dist/cjs/index.js"
+      }
+    },
+    "./package.json": "./package.json"
+  },
   "files": [
-    "index.js"
+    "dist",
+    "CHANGELOG.md"
   ],
+  "sideEffects": false,
   "scripts": {
-    "test": "node --test"
+    "clean": "node scripts/clean.mjs",
+    "build": "npm run clean && tsc -p tsconfig.cjs.json && tsc -p tsconfig.esm.json && node scripts/write-esm-stub.mjs",
+    "pretest": "npm run build",
+    "test": "node --test test/",
+    "prepublishOnly": "npm test"
   },
   "keywords": [
     "llm",
     "tokens",
     "context-window",
-    "visualization",
     "terminal",
     "gauge",
-    "dashboard"
+    "cli",
+    "visualization",
+    "tokenmaster",
+    "metering",
+    "usage"
   ],
   "author": "Muntaser Syed <jemsbhai@gmail.com>",
   "license": "MIT",
@@ -24,7 +49,10 @@
     "node": ">=18"
   },
   "dependencies": {
-    "tokenmaster": "^0.0.1"
+    "tokenmaster": ">=0.1.0 <0.2.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.5.0"
   },
   "repository": {
     "type": "git",
