@@ -33,7 +33,7 @@
  * JS surface notes: events() returns a snapshot array (arrays are iterable,
  * so for..of reads exactly like the reference's iterator); toJSON() returns
  * the plain object per the platform convention, so JSON.stringify(meter) is
- * the string form. reportHandoff() arrives with the fidelity module.
+ * the string form.
  */
 
 import {
@@ -51,6 +51,7 @@ import {
   AdvisorRecommendation,
   Event,
   EventCallback,
+  HandoffEvaluated,
   ModelChanged,
   TurnRecorded,
   VelocityShift,
@@ -63,6 +64,7 @@ import {
   ThresholdPolicy,
 } from "./advisor.js";
 import { getProfile } from "./registry.js";
+import { FidelityReport } from "./fidelity.js";
 
 const COLD_START_TURNS = 3;
 
@@ -346,6 +348,28 @@ export class Meter {
       })
     );
     return recommendation;
+  }
+
+  // ------------------------------------------------------------------ //
+  // fidelity
+
+  /**
+   * Emit a HandoffEvaluated event carrying a fidelity report.
+   *
+   * The evaluation itself is meter-independent (see fidelity.ts); this
+   * method exists so visualizers subscribed to the meter's stream see
+   * handoff scores alongside everything else.
+   */
+  reportHandoff(report: FidelityReport): void {
+    this._emit(
+      new HandoffEvaluated({
+        turn_id:
+          this._turns.length > 0
+            ? this._turns[this._turns.length - 1].turn_id
+            : null,
+        report,
+      })
+    );
   }
 
   // ------------------------------------------------------------------ //

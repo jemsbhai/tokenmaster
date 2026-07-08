@@ -65,6 +65,7 @@ export {
   VelocityShift,
   ModelChanged,
   AdvisorRecommendation,
+  HandoffEvaluated,
   eventFromDict,
 } from "./events.js";
 
@@ -80,3 +81,22 @@ export {
   defaultRegistry,
   getProfile,
 } from "./registry.js";
+
+export {
+  ProbeCategory,
+  asProbeCategory,
+  Probe,
+  ProbeOutcome,
+  FidelityReport,
+  ExactMatchJudge,
+  evaluateHandoff,
+} from "./fidelity.js";
+
+export type {
+  ProbeGenerator,
+  Answerer,
+  Judge,
+  ProbeDict,
+  ProbeOutcomeDict,
+  FidelityReportDict,
+} from "./fidelity.js";

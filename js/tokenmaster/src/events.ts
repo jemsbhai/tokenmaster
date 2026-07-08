@@ -7,9 +7,9 @@
  *      "turn_id": ..., "payload": {...}}
  *
  * This stream is the entire contract between tokenmaster and any visualizer.
- * Events implemented here are the ones something can emit today; only
- * HandoffEvaluated still arrives with its feature (fidelity), so that no
- * event type exists in code before something emits it.
+ * Every event type something can emit today is implemented here; only
+ * CalibrationLoaded awaits its feature, so that no event type exists in code
+ * before something emits it.
  *
  * Timestamps are ISO 8601 via Date.toISOString() ("Z" suffix); the Python
  * reference emits "+00:00". Conformance is unaffected: the spec excludes
@@ -25,6 +25,7 @@ import {
   asZone,
 } from "./types.js";
 import { Recommendation } from "./advisor.js";
+import { FidelityReport } from "./fidelity.js";
 
 function utcnow(): string {
   return new Date().toISOString();
@@ -224,6 +225,26 @@ export class AdvisorRecommendation extends Event {
 }
 
 // ---------------------------------------------------------------------------
+// fidelity events
+
+/** A handoff artifact was scored; carries the full fidelity report. */
+export class HandoffEvaluated extends Event {
+  static readonly EVENT_TYPE = "handoff_evaluated";
+
+  readonly report: FidelityReport;
+
+  constructor(fields: EventInit & { report: FidelityReport }) {
+    super(fields);
+    this.report = fields.report;
+    Object.freeze(this);
+  }
+
+  payload(): Record<string, unknown> {
+    return { report: this.report.toDict() };
+  }
+}
+
+// ---------------------------------------------------------------------------
 // wire reconstruction
 
 type EnvelopeFields = Required<EventInit>;
@@ -265,6 +286,13 @@ const EVENT_FACTORIES: Record<
       ...envelope,
       recommendation: Recommendation.fromDict(
         (payload["recommendation"] as Record<string, unknown>) ?? {}
+      ),
+    }),
+  [HandoffEvaluated.EVENT_TYPE]: (envelope, payload) =>
+    new HandoffEvaluated({
+      ...envelope,
+      report: FidelityReport.fromDict(
+        (payload["report"] as Record<string, unknown>) ?? {}
       ),
     }),
 };
