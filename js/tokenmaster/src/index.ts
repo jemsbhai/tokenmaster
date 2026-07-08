@@ -6,4 +6,29 @@
  * Modules land incrementally; this entry point re-exports the public surface.
  */
 
-export const SCHEMA_VERSION = "0.1";
+export {
+  SCHEMA_VERSION,
+  Zone,
+  UsageSource,
+  asZone,
+  asUsageSource,
+  Pricing,
+  CalibrationRecord,
+  ModelProfile,
+  Breakdown,
+  TurnUsage,
+  EtaEstimate,
+  CacheState,
+  MeterState,
+} from "./types.js";
+
+export type {
+  PricingDict,
+  CalibrationRecordDict,
+  ModelProfileDict,
+  BreakdownDict,
+  TurnUsageDict,
+  EtaEstimateDict,
+  CacheStateDict,
+  MeterStateDict,
+} from "./types.js";
