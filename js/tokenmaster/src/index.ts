@@ -46,4 +46,11 @@ export type { EventCallback, EventDict, EventInit } from "./events.js";
 
 export { Meter } from "./meter.js";
 
-export type { MeterConfigDict, MeterDict } from "./meter.js";
+export type { MeterConfigDict, MeterDict, MeterOptions } from "./meter.js";
+
+export {
+  Registry,
+  UnknownModelError,
+  defaultRegistry,
+  getProfile,
+} from "./registry.js";

@@ -56,6 +56,7 @@ import {
   VelocityShift,
   ZoneChanged,
 } from "./events.js";
+import { getProfile } from "./registry.js";
 
 const COLD_START_TURNS = 3;
 
@@ -125,6 +126,14 @@ export interface MeterDict {
   turns: TurnUsageDict[];
 }
 
+export interface MeterOptions {
+  reserved_output?: number;
+  alpha?: number;
+  caution?: number;
+  critical?: number;
+  velocity_shift_factor?: number;
+}
+
 /** Context-budget meter for one conversation against one model profile. */
 export class Meter {
   readonly profile: ModelProfile;
@@ -141,16 +150,7 @@ export class Meter {
   private readonly _subscribers: EventCallback[] = [];
   private _currentModel: string;
 
-  constructor(
-    profile: ModelProfile,
-    options: {
-      reserved_output?: number;
-      alpha?: number;
-      caution?: number;
-      critical?: number;
-      velocity_shift_factor?: number;
-    } = {}
-  ) {
+  constructor(profile: ModelProfile, options: MeterOptions = {}) {
     const reserved_output = options.reserved_output ?? 0;
     const alpha = options.alpha ?? 0.3;
     const caution = options.caution ?? 0.7;
@@ -177,6 +177,20 @@ export class Meter {
     this.critical = critical;
     this.velocity_shift_factor = velocity_shift_factor;
     this._currentModel = profile.model_id;
+  }
+
+  // ------------------------------------------------------------------ //
+  // construction from the registry
+
+  /**
+   * Construct a Meter from the bundled registry, zero configuration.
+   *
+   * Accepts canonical ids, bare names, aliases, and dated snapshot
+   * suffixes; throws UnknownModelError with close-match suggestions
+   * otherwise.
+   */
+  static forModel(modelId: string, options: MeterOptions = {}): Meter {
+    return new Meter(getProfile(modelId), options);
   }
 
   // ------------------------------------------------------------------ //
