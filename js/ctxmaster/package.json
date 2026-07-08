@@ -1,6 +1,6 @@
 {
   "name": "ctxmaster",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "description": "Terminal context gauge and visualization layer for tokenmaster: zone-colored budget bar, token velocity, and turns-to-exhaustion for LLM context windows.",
   "type": "commonjs",
   "main": "./dist/cjs/index.js",

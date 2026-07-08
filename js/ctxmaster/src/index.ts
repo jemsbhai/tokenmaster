@@ -13,7 +13,7 @@ import { SCHEMA_VERSION } from "tokenmaster";
 export { ContextGauge, ZONE_STYLE } from "./gauge.js";
 export type { GaugeOptions, LiveGauge } from "./gauge.js";
 
-export const VERSION = "0.0.1";
+export const VERSION = "0.1.0";
 
 /** Basic project metadata. */
 export function about(): {
