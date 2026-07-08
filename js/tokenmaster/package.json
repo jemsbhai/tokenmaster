@@ -1,6 +1,6 @@
 {
   "name": "tokenmaster",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "description": "Context-budget instrumentation core for LLM applications: normalized token accounting, effective-budget gauges, turns-to-exhaustion prediction, compaction and handoff decision policies, and a handoff fidelity protocol.",
   "type": "commonjs",
   "main": "./dist/cjs/index.js",
@@ -20,7 +20,8 @@
     "./package.json": "./package.json"
   },
   "files": [
-    "dist"
+    "dist",
+    "CHANGELOG.md"
   ],
   "sideEffects": false,
   "scripts": {
@@ -28,7 +29,8 @@
     "embed:models": "node scripts/embed-models.mjs",
     "build": "npm run clean && tsc -p tsconfig.cjs.json && tsc -p tsconfig.esm.json && node scripts/write-esm-stub.mjs",
     "pretest": "npm run build",
-    "test": "node --test test/"
+    "test": "node --test test/",
+    "prepublishOnly": "npm test"
   },
   "keywords": [
     "llm",
