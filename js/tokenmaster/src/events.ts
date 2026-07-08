@@ -243,7 +243,8 @@ const EVENT_FACTORIES: Record<
 };
 
 /** Reconstruct a typed event from its wire dictionary. */
-export function eventFromDict(d: Record<string, unknown>): Event {
+export function eventFromDict(dict: object): Event {
+  const d = dict as Record<string, unknown>;
   const eventType = d["event_type"];
   const factory =
     typeof eventType === "string" ? EVENT_FACTORIES[eventType] : undefined;

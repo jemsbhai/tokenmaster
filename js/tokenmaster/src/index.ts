@@ -43,3 +43,7 @@ export {
 } from "./events.js";
 
 export type { EventCallback, EventDict, EventInit } from "./events.js";
+
+export { Meter } from "./meter.js";
+
+export type { MeterConfigDict, MeterDict } from "./meter.js";

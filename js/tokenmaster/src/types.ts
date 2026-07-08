@@ -145,7 +145,8 @@ export class Pricing {
     return this.toDict();
   }
 
-  static fromDict(d: Record<string, unknown>): Pricing {
+  static fromDict(dict: object): Pricing {
+    const d = dict as Record<string, unknown>;
     return new Pricing({
       input: asFloat(d["input"], "input"),
       output: asFloat(d["output"], "output"),
@@ -224,7 +225,8 @@ export class CalibrationRecord {
     return this.toDict();
   }
 
-  static fromDict(d: Record<string, unknown>): CalibrationRecord {
+  static fromDict(dict: object): CalibrationRecord {
+    const d = dict as Record<string, unknown>;
     return new CalibrationRecord({
       model_id: reqString(d["model_id"], "model_id"),
       effective_context: asInt(d["effective_context"], "effective_context"),
@@ -326,7 +328,8 @@ export class ModelProfile {
     return this.toDict();
   }
 
-  static fromDict(d: Record<string, unknown>): ModelProfile {
+  static fromDict(dict: object): ModelProfile {
+    const d = dict as Record<string, unknown>;
     const pricing = nonEmptyDict(d["pricing"]);
     const effective = nonEmptyDict(d["effective"]);
     return new ModelProfile({
@@ -403,7 +406,8 @@ export class Breakdown {
     return this.toDict();
   }
 
-  static fromDict(d: Record<string, unknown>): Breakdown {
+  static fromDict(dict: object): Breakdown {
+    const d = dict as Record<string, unknown>;
     return new Breakdown({
       system_prompt:
         d["system_prompt"] === null || d["system_prompt"] === undefined
@@ -542,7 +546,8 @@ export class TurnUsage {
     return this.toDict();
   }
 
-  static fromDict(d: Record<string, unknown>, turnId?: number): TurnUsage {
+  static fromDict(dict: object, turnId?: number): TurnUsage {
+    const d = dict as Record<string, unknown>;
     const breakdown = nonEmptyDict(d["breakdown"]);
     const raw = nonEmptyDict(d["raw"]);
     return new TurnUsage({
@@ -611,7 +616,8 @@ export class EtaEstimate {
     return this.toDict();
   }
 
-  static fromDict(d: Record<string, unknown>): EtaEstimate {
+  static fromDict(dict: object): EtaEstimate {
+    const d = dict as Record<string, unknown>;
     return new EtaEstimate({
       expected: asFloat(d["expected"], "expected"),
       conservative: asFloat(d["conservative"], "conservative"),
@@ -657,7 +663,8 @@ export class CacheState {
     return this.toDict();
   }
 
-  static fromDict(d: Record<string, unknown>): CacheState {
+  static fromDict(dict: object): CacheState {
+    const d = dict as Record<string, unknown>;
     return new CacheState({
       stable_prefix_tokens: asInt(
         d["stable_prefix_tokens"],
@@ -792,7 +799,8 @@ export class MeterState {
     return this.toDict();
   }
 
-  static fromDict(d: Record<string, unknown>): MeterState {
+  static fromDict(dict: object): MeterState {
+    const d = dict as Record<string, unknown>;
     const eta = nonEmptyDict(d["eta_turns"]);
     const cache = nonEmptyDict(d["cache"]);
     return new MeterState({
