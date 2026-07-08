@@ -107,8 +107,9 @@ SDKs use for usage fields); methods are camelCase (`meter.state()`,
 so `JSON.stringify(meter)` and `JSON.stringify(state)` produce the wire form
 directly.
 
-The companion package ctxmaster provides the terminal gauge and other visual
-surfaces on top of the event stream; its npm port follows this core.
+The companion package [ctxmaster](https://www.npmjs.com/package/ctxmaster)
+provides the terminal gauge and other visual surfaces on top of the event
+stream.
 
 ## License
 

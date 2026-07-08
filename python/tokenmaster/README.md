@@ -57,7 +57,7 @@ meter.advise(TaskContext(expected_remaining_turns=40), policy=policy)
 - A bundled model registry (12 models with dated, cited pricing), alias and
   dated-suffix resolution, user overrides, and `Meter.for_model` for
   zero-configuration attachment.
-- A typed event stream (seven events with exact wire round-trips): the
+- A typed event stream (six event types with exact wire round-trips): the
   contract that visualizers such as ctxmaster, or your own, build on.
 - Three advisor policies: a threshold baseline that reproduces current
   practice, a predictive policy that compares conservative ETA against the
@@ -76,8 +76,9 @@ Provider adapters (Anthropic and OpenAI usage normalizers), tokenizer
 estimators, LLM-backed probe generators and judges, calibrated
 effective-capacity data (defaults equal the nominal window, and the
 provenance says so), async event delivery, and tiered long-context pricing
-in the registry. The npm and crates.io packages of the same name are
-reserved placeholders until the ports land.
+in the registry. The JavaScript port is live on npm (tokenmaster and
+ctxmaster, 0.1.0) and conformant against the vectors; the crates.io
+packages remain reserved placeholders until the Rust port lands.
 
 ## Design
 

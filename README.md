@@ -11,19 +11,26 @@ continuation prompt.
 built on tokenmaster. The core emits a stable, serializable state and event
 schema, so anyone can build a visualizer against it; ctxmaster is the first.
 
+## Install
+
+    pip install tokenmaster ctxmaster     # Python
+    npm install tokenmaster ctxmaster     # JavaScript
+
 ## Status
 
-Python packages are at 0.1.0 (alpha): the core contract (docs/core-api.md)
-is implemented, with conformance vectors under spec/ freezing the arithmetic
-for the ports. npm and crates.io names remain 0.0.1 placeholders until the
-JavaScript and Rust implementations land.
+Python and JavaScript packages are at 0.1.0 (alpha): the core contract
+(docs/core-api.md) is implemented in both languages, and the JavaScript port
+reproduces all nine conformance vectors under spec/ that freeze the
+arithmetic across languages. The JavaScript packages carry zero runtime
+dependencies (the wrapper depends only on the core). crates.io names remain
+0.0.1 placeholders until the Rust implementation lands.
 
 ## Repository layout
 
     python/tokenmaster    core library (PyPI: tokenmaster)
     python/ctxmaster      visualization layer (PyPI: ctxmaster)
-    js/tokenmaster        core placeholder (npm: tokenmaster)
-    js/ctxmaster          visualization placeholder (npm: ctxmaster)
+    js/tokenmaster        core library (npm: tokenmaster)
+    js/ctxmaster          visualization layer (npm: ctxmaster)
     rust/tokenmaster      core placeholder (crates.io: tokenmaster)
     rust/ctxmaster        visualization placeholder (crates.io: ctxmaster)
 

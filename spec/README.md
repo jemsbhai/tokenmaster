@@ -7,6 +7,9 @@ turn and the exact event sequence. An implementation (Python, JavaScript,
 Rust) is conformant when it reproduces every vector under the comparison
 rules below.
 
+Status: the Python reference and the JavaScript port (npm 0.1.0, repository
+tag js-v0.1.0) reproduce every vector; the Rust port is pending.
+
 ## Vector format
 
     {
@@ -48,5 +51,5 @@ committed after human review:
     python spec/generate_vectors.py
 
 Regenerating and diffing is the intended way to see whether a change to the
-core is behavior-preserving. Advisor and fidelity vectors are a planned
-addition once the ports exist.
+core is behavior-preserving. Advisor and fidelity vectors are the next
+planned addition.

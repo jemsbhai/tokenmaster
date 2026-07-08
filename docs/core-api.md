@@ -2,7 +2,9 @@
 
 Version: 0.1 (2026-07-07)
 Status: accepted 2026-07-07; resolved decisions recorded in section 11.
-Nothing in this document is implemented yet. This contract
+Implemented by the Python reference (PyPI 0.1.0) and the JavaScript port
+(npm 0.1.0), both reproducing the conformance vectors under spec/; the Rust
+implementation is pending. This contract
 governs the Python, JavaScript, and Rust implementations equally. Divergence
 between an implementation and this document is a bug in the implementation or
 a change request against this document, never a silent fork.
@@ -164,6 +166,10 @@ Every event carries schema_version, timestamp, turn_id, and a payload:
 - ModelChanged: old and new model_id, capacity implications.
 - CalibrationLoaded: CalibrationRecord applied.
 
+CalibrationLoaded is defined here but not yet emitted by any 0.1
+implementation: nothing loads calibrations dynamically yet, and no event
+type exists in code before something emits it.
+
 This stream is the entire contract between tokenmaster and ctxmaster. If a
 visualizer needs data that is not in an event or in MeterState, that is a
 change request against this document.
@@ -273,6 +279,17 @@ adapter, so the core stays offline-capable.
 Usability bar: one line to attach, zero configuration for known models,
 plain dicts accepted everywhere, and nothing imports outside the standard
 library unless an adapter is explicitly requested.
+
+JavaScript surface (informative, 0.1). The JS port mirrors this surface
+under platform conventions: wire data fields are snake_case exactly as the
+schema; methods are camelCase (Meter.forModel, m.state(), m.advise(task,
+policy), Meter.fromJSON). toJSON() returns the plain object per the JS
+platform convention, so JSON.stringify(meter) is the string form and
+fromJSON(blob) parses it back. events() returns a snapshot array, which is
+iterable like the reference's iterator. Event timestamps carry a Z suffix
+where Python emits +00:00; comparison rule 1 in spec/README.md makes the
+format non-normative. Meter.from_transcript above is not implemented in any
+language at 0.1 and is tracked as planned work.
 
 ## 8. Adapters and extension points
 
