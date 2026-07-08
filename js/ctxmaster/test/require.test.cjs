@@ -1,8 +1,10 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
 
-const { CORE_SCHEMA } = require("../dist/cjs/index.js");
+const { ContextGauge, about, VERSION } = require("../dist/cjs/index.js");
 
-test("CJS build links against the published tokenmaster core", () => {
-  assert.equal(CORE_SCHEMA, "0.1");
+test("CJS build exposes the gauge and links against the core", () => {
+  assert.equal(typeof ContextGauge, "function");
+  assert.equal(about().core_schema, "0.1");
+  assert.equal(about().version, VERSION);
 });
