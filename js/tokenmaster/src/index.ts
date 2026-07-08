@@ -32,3 +32,14 @@ export type {
   CacheStateDict,
   MeterStateDict,
 } from "./types.js";
+
+export {
+  Event,
+  TurnRecorded,
+  ZoneChanged,
+  VelocityShift,
+  ModelChanged,
+  eventFromDict,
+} from "./events.js";
+
+export type { EventCallback, EventDict, EventInit } from "./events.js";
