@@ -33,8 +33,7 @@
  * JS surface notes: events() returns a snapshot array (arrays are iterable,
  * so for..of reads exactly like the reference's iterator); toJSON() returns
  * the plain object per the platform convention, so JSON.stringify(meter) is
- * the string form. Meter.forModel, advise(), and reportHandoff() arrive with
- * the registry, advisor, and fidelity modules respectively.
+ * the string form. reportHandoff() arrives with the fidelity module.
  */
 
 import {
@@ -49,6 +48,7 @@ import {
   TurnUsageDict,
 } from "./types.js";
 import {
+  AdvisorRecommendation,
   Event,
   EventCallback,
   ModelChanged,
@@ -56,6 +56,12 @@ import {
   VelocityShift,
   ZoneChanged,
 } from "./events.js";
+import {
+  Policy,
+  Recommendation,
+  TaskContext,
+  ThresholdPolicy,
+} from "./advisor.js";
 import { getProfile } from "./registry.js";
 
 const COLD_START_TURNS = 3;
@@ -309,6 +315,37 @@ export class Meter {
     for (const callback of [...this._subscribers]) {
       callback(event);
     }
+  }
+
+  // ------------------------------------------------------------------ //
+  // advisor
+
+  /**
+   * Evaluate a policy against the current state and emit the result.
+   *
+   * The default policy is a ThresholdPolicy aligned to this meter's own
+   * zone thresholds, so the gauge and the default advice cannot disagree.
+   * Every call emits an AdvisorRecommendation event; the caller controls
+   * the cadence.
+   */
+  advise(
+    task: TaskContext | null = null,
+    policy: Policy | null = null
+  ): Recommendation {
+    const chosen =
+      policy ??
+      new ThresholdPolicy({ warn_at: this.caution, compact_at: this.critical });
+    const recommendation = chosen.evaluate(this.state(), task);
+    this._emit(
+      new AdvisorRecommendation({
+        turn_id:
+          this._turns.length > 0
+            ? this._turns[this._turns.length - 1].turn_id
+            : null,
+        recommendation,
+      })
+    );
+    return recommendation;
   }
 
   // ------------------------------------------------------------------ //

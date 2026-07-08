@@ -7,10 +7,9 @@
  *      "turn_id": ..., "payload": {...}}
  *
  * This stream is the entire contract between tokenmaster and any visualizer.
- * Events implemented here are the ones the Meter can emit today
- * (TurnRecorded, ZoneChanged, VelocityShift, ModelChanged);
- * AdvisorRecommendation and HandoffEvaluated arrive with their features so
- * that no event type exists in code before something emits it.
+ * Events implemented here are the ones something can emit today; only
+ * HandoffEvaluated still arrives with its feature (fidelity), so that no
+ * event type exists in code before something emits it.
  *
  * Timestamps are ISO 8601 via Date.toISOString() ("Z" suffix); the Python
  * reference emits "+00:00". Conformance is unaffected: the spec excludes
@@ -25,6 +24,7 @@ import {
   Zone,
   asZone,
 } from "./types.js";
+import { Recommendation } from "./advisor.js";
 
 function utcnow(): string {
   return new Date().toISOString();
@@ -204,6 +204,26 @@ export class ModelChanged extends Event {
 }
 
 // ---------------------------------------------------------------------------
+// advisor events
+
+/** A policy was evaluated; carries the full recommendation. */
+export class AdvisorRecommendation extends Event {
+  static readonly EVENT_TYPE = "advisor_recommendation";
+
+  readonly recommendation: Recommendation;
+
+  constructor(fields: EventInit & { recommendation: Recommendation }) {
+    super(fields);
+    this.recommendation = fields.recommendation;
+    Object.freeze(this);
+  }
+
+  payload(): Record<string, unknown> {
+    return { recommendation: this.recommendation.toDict() };
+  }
+}
+
+// ---------------------------------------------------------------------------
 // wire reconstruction
 
 type EnvelopeFields = Required<EventInit>;
@@ -239,6 +259,13 @@ const EVENT_FACTORIES: Record<
         "previous_model_id"
       ),
       new_model_id: reqString(payload["new_model_id"], "new_model_id"),
+    }),
+  [AdvisorRecommendation.EVENT_TYPE]: (envelope, payload) =>
+    new AdvisorRecommendation({
+      ...envelope,
+      recommendation: Recommendation.fromDict(
+        (payload["recommendation"] as Record<string, unknown>) ?? {}
+      ),
     }),
 };
 

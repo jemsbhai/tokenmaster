@@ -34,11 +34,37 @@ export type {
 } from "./types.js";
 
 export {
+  Action,
+  Urgency,
+  TaskCriticality,
+  asAction,
+  asUrgency,
+  asTaskCriticality,
+  TaskContext,
+  RationaleTrace,
+  EffectEstimate,
+  Recommendation,
+  ThresholdPolicy,
+  PredictivePolicy,
+  CostModelPolicy,
+} from "./advisor.js";
+
+export type {
+  Policy,
+  CostModelPolicyOptions,
+  TaskContextDict,
+  RationaleTraceDict,
+  EffectEstimateDict,
+  RecommendationDict,
+} from "./advisor.js";
+
+export {
   Event,
   TurnRecorded,
   ZoneChanged,
   VelocityShift,
   ModelChanged,
+  AdvisorRecommendation,
   eventFromDict,
 } from "./events.js";
 
