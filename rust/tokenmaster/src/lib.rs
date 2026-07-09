@@ -9,8 +9,10 @@
 //! under spec/vectors are the executable specification, and divergence from
 //! the Python reference on any vector is a bug here.
 
+pub mod events;
 pub mod types;
 
+pub use events::{Event, EventKind};
 pub use types::{
     Breakdown, CacheState, CalibrationRecord, Error, EtaEstimate, MeterState, ModelProfile,
     Pricing, TurnUsage, UsageSource, Zone, SCHEMA_VERSION,

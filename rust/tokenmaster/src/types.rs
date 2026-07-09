@@ -63,7 +63,7 @@ impl std::error::Error for Error {}
 // ------------------------------------------------------------------------ //
 // parsing helpers (from_dict semantics)
 
-fn as_map<'a>(v: &'a Value, ctx: &str) -> Result<&'a Map<String, Value>, Error> {
+pub(crate) fn as_map<'a>(v: &'a Value, ctx: &str) -> Result<&'a Map<String, Value>, Error> {
     v.as_object()
         .ok_or_else(|| Error::Parse(format!("{ctx}: expected a JSON object")))
 }
@@ -136,14 +136,14 @@ fn i64_or(d: &Map<String, Value>, key: &str, default: i64, ctx: &str) -> Result<
     }
 }
 
-fn opt_i64(d: &Map<String, Value>, key: &str, ctx: &str) -> Result<Option<i64>, Error> {
+pub(crate) fn opt_i64(d: &Map<String, Value>, key: &str, ctx: &str) -> Result<Option<i64>, Error> {
     match d.get(key) {
         None | Some(Value::Null) => Ok(None),
         Some(v) => Ok(Some(to_i64(v, ctx, key)?)),
     }
 }
 
-fn req_f64(d: &Map<String, Value>, key: &str, ctx: &str) -> Result<f64, Error> {
+pub(crate) fn req_f64(d: &Map<String, Value>, key: &str, ctx: &str) -> Result<f64, Error> {
     match d.get(key) {
         None => Err(Error::Parse(format!("{ctx}: missing required field '{key}'"))),
         Some(v) => to_f64(v, ctx, key),
@@ -164,14 +164,14 @@ fn opt_f64(d: &Map<String, Value>, key: &str, ctx: &str) -> Result<Option<f64>, 
     }
 }
 
-fn req_string(d: &Map<String, Value>, key: &str, ctx: &str) -> Result<String, Error> {
+pub(crate) fn req_string(d: &Map<String, Value>, key: &str, ctx: &str) -> Result<String, Error> {
     match d.get(key) {
         None => Err(Error::Parse(format!("{ctx}: missing required field '{key}'"))),
         Some(v) => to_scalar_string(v, ctx, key),
     }
 }
 
-fn string_or(d: &Map<String, Value>, key: &str, default: &str, ctx: &str) -> Result<String, Error> {
+pub(crate) fn string_or(d: &Map<String, Value>, key: &str, default: &str, ctx: &str) -> Result<String, Error> {
     match d.get(key) {
         None | Some(Value::Null) => Ok(default.to_string()),
         Some(v) => to_scalar_string(v, ctx, key),
