@@ -68,6 +68,15 @@ pub(crate) fn as_map<'a>(v: &'a Value, ctx: &str) -> Result<&'a Map<String, Valu
         .ok_or_else(|| Error::Parse(format!("{ctx}: expected a JSON object")))
 }
 
+pub(crate) fn req_value<'a>(
+    d: &'a Map<String, Value>,
+    key: &str,
+    ctx: &str,
+) -> Result<&'a Value, Error> {
+    d.get(key)
+        .ok_or_else(|| Error::Parse(format!("{ctx}: missing required field '{key}'")))
+}
+
 /// Python truthiness over JSON values: null, false, 0, "", [], {} are falsy.
 fn is_falsy(v: &Value) -> bool {
     match v {
@@ -129,7 +138,7 @@ fn req_i64(d: &Map<String, Value>, key: &str, ctx: &str) -> Result<i64, Error> {
     }
 }
 
-fn i64_or(d: &Map<String, Value>, key: &str, default: i64, ctx: &str) -> Result<i64, Error> {
+pub(crate) fn i64_or(d: &Map<String, Value>, key: &str, default: i64, ctx: &str) -> Result<i64, Error> {
     match d.get(key) {
         None | Some(Value::Null) => Ok(default),
         Some(v) => to_i64(v, ctx, key),
@@ -150,7 +159,7 @@ pub(crate) fn req_f64(d: &Map<String, Value>, key: &str, ctx: &str) -> Result<f6
     }
 }
 
-fn f64_or(d: &Map<String, Value>, key: &str, default: f64, ctx: &str) -> Result<f64, Error> {
+pub(crate) fn f64_or(d: &Map<String, Value>, key: &str, default: f64, ctx: &str) -> Result<f64, Error> {
     match d.get(key) {
         None | Some(Value::Null) => Ok(default),
         Some(v) => to_f64(v, ctx, key),

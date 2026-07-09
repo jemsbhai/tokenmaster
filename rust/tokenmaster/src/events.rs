@@ -27,8 +27,8 @@ use serde::Serialize;
 use serde_json::{Map, Value};
 
 use crate::types::{
-    as_map, opt_i64, req_f64, req_string, string_or, Error, MeterState, TurnUsage, Zone,
-    SCHEMA_VERSION,
+    as_map, opt_i64, req_f64, req_string, req_value, string_or, Error, MeterState, TurnUsage,
+    Zone, SCHEMA_VERSION,
 };
 
 // ------------------------------------------------------------------------ //
@@ -114,11 +114,6 @@ impl EventKind {
             EventKind::ModelChanged { .. } => "model_changed",
         }
     }
-}
-
-fn req_value<'a>(d: &'a Map<String, Value>, key: &str, ctx: &str) -> Result<&'a Value, Error> {
-    d.get(key)
-        .ok_or_else(|| Error::Parse(format!("{ctx}: missing required field '{key}'")))
 }
 
 impl Event {
