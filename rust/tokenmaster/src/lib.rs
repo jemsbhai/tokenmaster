@@ -1,50 +1,17 @@
 //! tokenmaster: core context-budget metering and decision engine for LLM
 //! applications.
 //!
-//! Placeholder release (0.0.1) reserving the crate name while the core API is
-//! designed. Do not build against this version.
+//! Computation only: normalized token accounting (TurnUsage), calibrated
+//! effective-budget gauges (MeterState), turns-to-exhaustion prediction, and
+//! compaction/handoff decision policies. Rendering lives in the companion
+//! ctxmaster crate. This crate is the Rust implementation of the
+//! cross-language contract in docs/core-api.md; the conformance vectors
+//! under spec/vectors are the executable specification, and divergence from
+//! the Python reference on any vector is a bug here.
 
-/// Crate version for this placeholder release.
-pub const VERSION: &str = "0.0.1";
+pub mod types;
 
-/// Basic project metadata for this placeholder release.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct About {
-    pub name: &'static str,
-    pub version: &'static str,
-    pub summary: &'static str,
-    pub companion: &'static str,
-    pub repository: &'static str,
-    pub status: &'static str,
-}
-
-/// Return basic project metadata for this placeholder release.
-pub fn about() -> About {
-    About {
-        name: "tokenmaster",
-        version: VERSION,
-        summary: "Core context-budget metering and decision engine for LLM applications.",
-        companion: "ctxmaster (visualization layer)",
-        repository: "https://github.com/jemsbhai/tokenmaster",
-        status: "placeholder",
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn version_matches_placeholder() {
-        assert_eq!(VERSION, "0.0.1");
-    }
-
-    #[test]
-    fn about_returns_expected_metadata() {
-        let info = about();
-        assert_eq!(info.name, "tokenmaster");
-        assert_eq!(info.version, VERSION);
-        assert_eq!(info.status, "placeholder");
-        assert!(info.companion.contains("ctxmaster"));
-    }
-}
+pub use types::{
+    Breakdown, CacheState, CalibrationRecord, Error, EtaEstimate, MeterState, ModelProfile,
+    Pricing, TurnUsage, UsageSource, Zone, SCHEMA_VERSION,
+};

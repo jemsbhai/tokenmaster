@@ -2,9 +2,14 @@
 name = "tokenmaster"
 version = "0.0.1"
 edition = "2021"
-description = "Core context-budget metering and decision engine for LLM applications: normalized token accounting, effective-budget gauges, turns-to-exhaustion prediction, and compaction/handoff decisions. Placeholder release."
+rust-version = "1.70"
+description = "Core context-budget metering and decision engine for LLM applications: normalized token accounting, effective-budget gauges, turns-to-exhaustion prediction, and compaction/handoff decisions."
 license = "MIT"
 repository = "https://github.com/jemsbhai/tokenmaster"
 readme = "README.md"
 keywords = ["llm", "tokens", "context-window", "compaction", "metering"]
 categories = ["development-tools"]
+
+[dependencies]
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
