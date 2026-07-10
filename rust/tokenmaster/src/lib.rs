@@ -11,6 +11,7 @@
 
 pub mod advisor;
 pub mod events;
+pub mod fidelity;
 pub mod meter;
 pub mod registry;
 pub mod types;
@@ -20,6 +21,10 @@ pub use advisor::{
     RationaleTrace, Recommendation, TaskContext, TaskCriticality, ThresholdPolicy, Urgency,
 };
 pub use events::{Event, EventKind};
+pub use fidelity::{
+    evaluate_handoff, evaluate_handoff_with, Answerer, EvaluateOptions, ExactMatchJudge,
+    FidelityReport, Judge, Probe, ProbeCategory, ProbeGenerator, ProbeOutcome,
+};
 pub use meter::{Meter, MeterConfig, SubscriptionId};
 pub use registry::{default_registry, get_profile, Registry};
 pub use types::{

@@ -35,8 +35,7 @@
 //! unsubscriber closure is not expressible under ownership, and callbacks
 //! carry a Send bound so a Meter can live behind Arc<Mutex<..>>; `events()`
 //! returns a borrowed slice, the borrow-checked equivalent of the
-//! reference's snapshot iterator. `advise` and `report_handoff` arrive with
-//! the advisor and fidelity modules per the port's dependency-honest order.
+//! reference's snapshot iterator.
 
 use std::collections::BTreeMap;
 use std::fmt;
@@ -45,6 +44,7 @@ use serde_json::{json, Map, Value};
 
 use crate::advisor::{Policy, Recommendation, TaskContext, ThresholdPolicy};
 use crate::events::{utcnow, Event, EventKind};
+use crate::fidelity::FidelityReport;
 use crate::registry::get_profile;
 use crate::types::{
     as_map, f64_or, i64_or, req_value, CacheState, Error, EtaEstimate, MeterState, ModelProfile,
@@ -361,6 +361,16 @@ impl Meter {
             },
         ));
         recommendation
+    }
+
+    /// Emit a HandoffEvaluated event carrying a fidelity report.
+    ///
+    /// The evaluation itself is meter-independent (see the fidelity
+    /// module); this method exists so visualizers subscribed to the
+    /// meter's stream see handoff scores alongside everything else.
+    pub fn report_handoff(&mut self, report: FidelityReport) {
+        let turn_id = self.turns.last().map(|t| t.turn_id);
+        self.emit(Event::new(turn_id, EventKind::HandoffEvaluated { report }));
     }
 
     // ------------------------------------------------------------------ //

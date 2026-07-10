@@ -8,11 +8,11 @@
 //! ```
 //!
 //! This stream is the entire contract between tokenmaster and any
-//! visualizer. Events implemented here are the ones something can emit at
-//! this point in the port (TurnRecorded, ZoneChanged, VelocityShift,
-//! ModelChanged, AdvisorRecommendation); HandoffEvaluated arrives with the
-//! fidelity module, and CalibrationLoaded awaits its feature, so that no
-//! event type exists in code before something emits it.
+//! visualizer. Events implemented here are the ones something can emit
+//! today (TurnRecorded, ZoneChanged, VelocityShift, ModelChanged,
+//! AdvisorRecommendation, HandoffEvaluated); CalibrationLoaded arrives with
+//! its feature so that no event type exists in code before something emits
+//! it.
 //!
 //! Timestamps are ISO 8601 UTC with a "Z" suffix and microsecond precision,
 //! produced by a std-only epoch-to-civil conversion (the reference emits
@@ -27,6 +27,7 @@ use serde::Serialize;
 use serde_json::{Map, Value};
 
 use crate::advisor::Recommendation;
+use crate::fidelity::FidelityReport;
 use crate::types::{
     as_map, opt_i64, req_f64, req_string, req_value, string_or, Error, MeterState, TurnUsage,
     Zone, SCHEMA_VERSION,
@@ -105,6 +106,8 @@ pub enum EventKind {
     },
     /// A policy was evaluated; carries the full recommendation.
     AdvisorRecommendation { recommendation: Recommendation },
+    /// A handoff artifact was scored; carries the full fidelity report.
+    HandoffEvaluated { report: FidelityReport },
 }
 
 impl EventKind {
@@ -116,6 +119,7 @@ impl EventKind {
             EventKind::VelocityShift { .. } => "velocity_shift",
             EventKind::ModelChanged { .. } => "model_changed",
             EventKind::AdvisorRecommendation { .. } => "advisor_recommendation",
+            EventKind::HandoffEvaluated { .. } => "handoff_evaluated",
         }
     }
 }
@@ -186,6 +190,13 @@ impl Event {
                     payload,
                     "recommendation",
                     "AdvisorRecommendation payload",
+                )?)?,
+            },
+            "handoff_evaluated" => EventKind::HandoffEvaluated {
+                report: FidelityReport::from_value(req_value(
+                    payload,
+                    "report",
+                    "HandoffEvaluated payload",
                 )?)?,
             },
             other => return Err(Error::Value(format!("Unknown event_type: '{other}'"))),

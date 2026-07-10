@@ -124,7 +124,7 @@ fn to_i64(v: &Value, ctx: &str, key: &str) -> Result<i64, Error> {
     }
 }
 
-fn to_f64(v: &Value, ctx: &str, key: &str) -> Result<f64, Error> {
+pub(crate) fn to_f64(v: &Value, ctx: &str, key: &str) -> Result<f64, Error> {
     match v {
         Value::Number(n) => n
             .as_f64()
