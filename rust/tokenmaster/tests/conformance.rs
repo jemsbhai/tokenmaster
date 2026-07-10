@@ -85,7 +85,6 @@ fn slim_event(event: &Event) -> Value {
     entry.insert("event_type".to_string(), json!(event.event_type()));
     entry.insert("turn_id".to_string(), json!(event.turn_id));
     match &event.kind {
-        EventKind::TurnRecorded { .. } => {}
         EventKind::ZoneChanged {
             from_zone,
             to_zone,
@@ -106,6 +105,9 @@ fn slim_event(event: &Event) -> Value {
             entry.insert("previous_model_id".to_string(), json!(previous_model_id));
             entry.insert("new_model_id".to_string(), json!(new_model_id));
         }
+        // turn_recorded stays slim; event kinds outside the vector set
+        // (advisor, fidelity) fall through slim as in the reference.
+        _ => {}
     }
     Value::Object(entry)
 }

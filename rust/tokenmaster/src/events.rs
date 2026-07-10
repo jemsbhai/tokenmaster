@@ -8,11 +8,11 @@
 //! ```
 //!
 //! This stream is the entire contract between tokenmaster and any
-//! visualizer. Events implemented here are the ones the Meter can emit at
+//! visualizer. Events implemented here are the ones something can emit at
 //! this point in the port (TurnRecorded, ZoneChanged, VelocityShift,
-//! ModelChanged); AdvisorRecommendation and HandoffEvaluated arrive with the
-//! advisor and fidelity modules, and CalibrationLoaded awaits its feature,
-//! so that no event type exists in code before something emits it.
+//! ModelChanged, AdvisorRecommendation); HandoffEvaluated arrives with the
+//! fidelity module, and CalibrationLoaded awaits its feature, so that no
+//! event type exists in code before something emits it.
 //!
 //! Timestamps are ISO 8601 UTC with a "Z" suffix and microsecond precision,
 //! produced by a std-only epoch-to-civil conversion (the reference emits
@@ -26,6 +26,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 use serde::Serialize;
 use serde_json::{Map, Value};
 
+use crate::advisor::Recommendation;
 use crate::types::{
     as_map, opt_i64, req_f64, req_string, req_value, string_or, Error, MeterState, TurnUsage,
     Zone, SCHEMA_VERSION,
@@ -102,6 +103,8 @@ pub enum EventKind {
         previous_model_id: String,
         new_model_id: String,
     },
+    /// A policy was evaluated; carries the full recommendation.
+    AdvisorRecommendation { recommendation: Recommendation },
 }
 
 impl EventKind {
@@ -112,6 +115,7 @@ impl EventKind {
             EventKind::ZoneChanged { .. } => "zone_changed",
             EventKind::VelocityShift { .. } => "velocity_shift",
             EventKind::ModelChanged { .. } => "model_changed",
+            EventKind::AdvisorRecommendation { .. } => "advisor_recommendation",
         }
     }
 }
@@ -176,6 +180,13 @@ impl Event {
                     "ModelChanged payload",
                 )?,
                 new_model_id: req_string(payload, "new_model_id", "ModelChanged payload")?,
+            },
+            "advisor_recommendation" => EventKind::AdvisorRecommendation {
+                recommendation: Recommendation::from_value(req_value(
+                    payload,
+                    "recommendation",
+                    "AdvisorRecommendation payload",
+                )?)?,
             },
             other => return Err(Error::Value(format!("Unknown event_type: '{other}'"))),
         };

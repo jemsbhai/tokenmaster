@@ -9,11 +9,16 @@
 //! under spec/vectors are the executable specification, and divergence from
 //! the Python reference on any vector is a bug here.
 
+pub mod advisor;
 pub mod events;
 pub mod meter;
 pub mod registry;
 pub mod types;
 
+pub use advisor::{
+    Action, CostModelConfig, CostModelPolicy, EffectEstimate, Policy, PredictivePolicy,
+    RationaleTrace, Recommendation, TaskContext, TaskCriticality, ThresholdPolicy, Urgency,
+};
 pub use events::{Event, EventKind};
 pub use meter::{Meter, MeterConfig, SubscriptionId};
 pub use registry::{default_registry, get_profile, Registry};

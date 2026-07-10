@@ -181,7 +181,7 @@ pub(crate) fn f64_or(d: &Map<String, Value>, key: &str, default: f64, ctx: &str)
     }
 }
 
-fn opt_f64(d: &Map<String, Value>, key: &str, ctx: &str) -> Result<Option<f64>, Error> {
+pub(crate) fn opt_f64(d: &Map<String, Value>, key: &str, ctx: &str) -> Result<Option<f64>, Error> {
     match d.get(key) {
         None | Some(Value::Null) => Ok(None),
         Some(v) => Ok(Some(to_f64(v, ctx, key)?)),

@@ -43,6 +43,7 @@ use std::fmt;
 
 use serde_json::{json, Map, Value};
 
+use crate::advisor::{Policy, Recommendation, TaskContext, ThresholdPolicy};
 use crate::events::{utcnow, Event, EventKind};
 use crate::registry::get_profile;
 use crate::types::{
@@ -325,6 +326,41 @@ impl Meter {
         for (_, callback) in self.subscribers.iter_mut() {
             callback(event);
         }
+    }
+
+    // ------------------------------------------------------------------ //
+    // advisor
+
+    /// Evaluate a policy against the current state and emit the result.
+    ///
+    /// The default policy (when `policy` is None) is a ThresholdPolicy
+    /// aligned to this meter's own zone thresholds, so the gauge and the
+    /// default advice cannot disagree. Every call emits an
+    /// AdvisorRecommendation event; the caller controls the cadence.
+    pub fn advise(
+        &mut self,
+        task: Option<&TaskContext>,
+        policy: Option<&dyn Policy>,
+    ) -> Recommendation {
+        let default_policy;
+        let chosen: &dyn Policy = match policy {
+            Some(p) => p,
+            None => {
+                default_policy =
+                    ThresholdPolicy::new(self.config.caution, self.config.critical)
+                        .expect("meter thresholds satisfy the policy constraint");
+                &default_policy
+            }
+        };
+        let recommendation = chosen.evaluate(&self.state(), task);
+        let turn_id = self.turns.last().map(|t| t.turn_id);
+        self.emit(Event::new(
+            turn_id,
+            EventKind::AdvisorRecommendation {
+                recommendation: recommendation.clone(),
+            },
+        ));
+        recommendation
     }
 
     // ------------------------------------------------------------------ //
