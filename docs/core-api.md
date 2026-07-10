@@ -2,9 +2,9 @@
 
 Version: 0.1 (2026-07-07)
 Status: accepted 2026-07-07; resolved decisions recorded in section 11.
-Implemented by the Python reference (PyPI 0.1.0) and the JavaScript port
-(npm 0.1.0), both reproducing the conformance vectors under spec/; the Rust
-implementation is pending. This contract
+Implemented by the Python reference (PyPI 0.1.0), the JavaScript port
+(npm 0.1.0), and the Rust port (crates.io 0.1.0), all three reproducing the
+conformance vectors under spec/. This contract
 governs the Python, JavaScript, and Rust implementations equally. Divergence
 between an implementation and this document is a bug in the implementation or
 a change request against this document, never a silent fork.
@@ -290,6 +290,27 @@ iterable like the reference's iterator. Event timestamps carry a Z suffix
 where Python emits +00:00; comparison rule 1 in spec/README.md makes the
 format non-normative. Meter.from_transcript above is not implemented in any
 language at 0.1 and is tracked as planned work.
+
+Rust surface (informative, 0.1). The Rust port mirrors this surface under
+platform conventions: wire fields are snake_case natively; parsing goes
+through from_value and from_json, and serde Serialize produces the wire
+form. Meter::for_model resolves the bundled registry; record takes a
+TurnUsage and record_value takes a plain JSON object (the reference's dict
+path); keyword arguments map to config structs (MeterConfig,
+CostModelConfig) with validating constructors. subscribe returns a
+SubscriptionId handle because the reference's unsubscriber closure is not
+expressible under ownership; callbacks, Policy, and the fidelity adapter
+traits carry Send bounds so meters and policies can live behind shared
+state, and adapter methods return Result where the reference raises.
+ValueError maps to Error::Value with the reference message texts preserved;
+UnknownModel carries the close-match suggestions. serde and serde_json are
+the crate's only dependencies, a recorded departure from the letter of P2
+that keeps its intent: Rust has no standard-library JSON, and TurnUsage.raw
+requires an arbitrary JSON value type. The bundled models.json is a
+committed copy inside the crate, held equal to the canonical Python file by
+a sync test. Event timestamps carry a Z suffix with microsecond precision
+from a standard-library-only conversion; comparison rule 1 makes the format
+non-normative. Edition 2021, minimum supported Rust 1.70.
 
 ## 8. Adapters and extension points
 

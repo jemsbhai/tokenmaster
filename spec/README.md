@@ -7,8 +7,9 @@ turn and the exact event sequence. An implementation (Python, JavaScript,
 Rust) is conformant when it reproduces every vector under the comparison
 rules below.
 
-Status: the Python reference and the JavaScript port (npm 0.1.0, repository
-tag js-v0.1.0) reproduce every vector; the Rust port is pending.
+Status: the Python reference, the JavaScript port (npm 0.1.0, repository
+tag js-v0.1.0), and the Rust port (crates.io 0.1.0, repository tag
+rust-v0.1.0) reproduce every vector.
 
 ## Vector format
 
