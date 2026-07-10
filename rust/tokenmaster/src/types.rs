@@ -48,12 +48,27 @@ pub enum Error {
     Value(String),
     /// Malformed or missing data while parsing wire input.
     Parse(String),
+    /// A model id could not be resolved by the registry.
+    UnknownModel {
+        model_id: String,
+        suggestions: Vec<String>,
+    },
 }
 
 impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Error::Value(msg) | Error::Parse(msg) => f.write_str(msg),
+            Error::UnknownModel {
+                model_id,
+                suggestions,
+            } => {
+                write!(f, "Unknown model '{model_id}'; not in the registry.")?;
+                if !suggestions.is_empty() {
+                    write!(f, " Close matches: {}", suggestions.join(", "))?;
+                }
+                write!(f, " Register it with Registry.register(ModelProfile(...)).")
+            }
         }
     }
 }
@@ -187,7 +202,7 @@ pub(crate) fn string_or(d: &Map<String, Value>, key: &str, default: &str, ctx: &
     }
 }
 
-fn opt_string(d: &Map<String, Value>, key: &str, ctx: &str) -> Result<Option<String>, Error> {
+pub(crate) fn opt_string(d: &Map<String, Value>, key: &str, ctx: &str) -> Result<Option<String>, Error> {
     match d.get(key) {
         None | Some(Value::Null) => Ok(None),
         Some(v) => Ok(Some(to_scalar_string(v, ctx, key)?)),

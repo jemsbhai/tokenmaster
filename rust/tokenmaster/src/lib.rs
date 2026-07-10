@@ -11,10 +11,12 @@
 
 pub mod events;
 pub mod meter;
+pub mod registry;
 pub mod types;
 
 pub use events::{Event, EventKind};
 pub use meter::{Meter, MeterConfig, SubscriptionId};
+pub use registry::{default_registry, get_profile, Registry};
 pub use types::{
     Breakdown, CacheState, CalibrationRecord, Error, EtaEstimate, MeterState, ModelProfile,
     Pricing, TurnUsage, UsageSource, Zone, SCHEMA_VERSION,

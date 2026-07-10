@@ -35,15 +35,16 @@
 //! unsubscriber closure is not expressible under ownership, and callbacks
 //! carry a Send bound so a Meter can live behind Arc<Mutex<..>>; `events()`
 //! returns a borrowed slice, the borrow-checked equivalent of the
-//! reference's snapshot iterator. `for_model`, `advise`, and
-//! `report_handoff` arrive with the registry, advisor, and fidelity modules
-//! per the port's dependency-honest order.
+//! reference's snapshot iterator. `advise` and `report_handoff` arrive with
+//! the advisor and fidelity modules per the port's dependency-honest order.
 
 use std::collections::BTreeMap;
+use std::fmt;
 
 use serde_json::{json, Map, Value};
 
 use crate::events::{utcnow, Event, EventKind};
+use crate::registry::get_profile;
 use crate::types::{
     as_map, f64_or, i64_or, req_value, CacheState, Error, EtaEstimate, MeterState, ModelProfile,
     TurnUsage, Zone, SCHEMA_VERSION,
@@ -121,6 +122,22 @@ pub struct Meter {
     current_model: String,
 }
 
+impl fmt::Debug for Meter {
+    /// Manual impl: subscriber closures are not Debug. Collections are
+    /// summarized by length to keep output bounded.
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("Meter")
+            .field("profile", &self.profile)
+            .field("config", &self.config)
+            .field("turns", &self.turns.len())
+            .field("events", &self.events.len())
+            .field("ew_mean", &self.ew_mean)
+            .field("ew_var", &self.ew_var)
+            .field("current_model", &self.current_model)
+            .finish_non_exhaustive()
+    }
+}
+
 impl Meter {
     /// Construct with default configuration.
     pub fn new(profile: ModelProfile) -> Result<Meter, Error> {
@@ -159,6 +176,23 @@ impl Meter {
             next_subscription: 0,
             current_model,
         })
+    }
+
+    // ------------------------------------------------------------------ //
+    // construction from the registry
+
+    /// Construct a Meter from the bundled registry, zero configuration.
+    ///
+    /// Accepts canonical ids, bare names, aliases, and dated snapshot
+    /// suffixes; fails with [`Error::UnknownModel`] carrying close-match
+    /// suggestions otherwise.
+    pub fn for_model(model_id: &str) -> Result<Meter, Error> {
+        Meter::with_config(get_profile(model_id)?, MeterConfig::default())
+    }
+
+    /// [`Meter::for_model`] with explicit configuration.
+    pub fn for_model_with_config(model_id: &str, config: MeterConfig) -> Result<Meter, Error> {
+        Meter::with_config(get_profile(model_id)?, config)
     }
 
     // ------------------------------------------------------------------ //
