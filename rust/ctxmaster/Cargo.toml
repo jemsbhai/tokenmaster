@@ -2,7 +2,8 @@
 name = "ctxmaster"
 version = "0.0.1"
 edition = "2021"
-description = "Visualization layer for tokenmaster: CLI, terminal gauge, and dashboard renderers for LLM context-budget metering. Placeholder release."
+rust-version = "1.70"
+description = "Visualization layer for tokenmaster: terminal context gauge for LLM context-budget metering, rendered in raw ANSI with zero dependencies beyond the core."
 license = "MIT"
 repository = "https://github.com/jemsbhai/tokenmaster"
 readme = "README.md"
@@ -11,3 +12,6 @@ categories = ["visualization", "development-tools"]
 
 [dependencies]
 tokenmaster = { version = "0.0.1", path = "../tokenmaster" }
+
+[dev-dependencies]
+serde_json = "1"
