@@ -2,6 +2,12 @@
 
 All notable changes to ctxmaster are documented in this file.
 
+## 0.1.1 (2026-07-13)
+
+- Documentation-only release; no code changes.
+- README: the npm and crates.io packages recorded as live at 0.1.0; stale
+  placeholder language removed.
+
 ## 0.1.0 (2026-07-07)
 
 - ContextGauge, the hero surface (contract decision D10): zone-colored fill

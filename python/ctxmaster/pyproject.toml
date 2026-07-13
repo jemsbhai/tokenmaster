@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "ctxmaster"
-version = "0.1.0"
+version = "0.1.1"
 description = "Visualization layer for tokenmaster: terminal context gauge and renderers for LLM context-budget metering."
 readme = "README.md"
 requires-python = ">=3.10"

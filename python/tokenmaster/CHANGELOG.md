@@ -2,6 +2,17 @@
 
 All notable changes to tokenmaster are documented in this file.
 
+## 0.1.1 (2026-07-13)
+
+- Documentation-only release; no code changes.
+- README: new "Models outside the registry" section covering custom
+  ModelProfile construction, process-wide registration with aliases, and
+  overriding bundled capacities or pricing (prompted by feedback from a
+  downstream integrator).
+- README: event stream corrected to six event types; the JavaScript (npm)
+  and Rust (crates.io) ports recorded as live at 0.1.0 and conformant
+  against the shared vectors.
+
 ## 0.1.0 (2026-07-07)
 
 - Typed data model (ModelProfile, TurnUsage, MeterState, CalibrationRecord)
