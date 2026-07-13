@@ -54,6 +54,36 @@ meter.advise(new TaskContext({ expected_remaining_turns: 40 }), policy);
 
 CommonJS works too: `const { Meter } = require("tokenmaster");`
 
+## Models outside the registry
+
+Any model works; the bundled registry is a convenience, not a gate. For an
+id the snapshot does not know (an OpenRouter route, a local runtime, a
+private deployment), build a ModelProfile and either pass it straight to
+Meter or register it once per process:
+
+```js
+import { Meter, ModelProfile, defaultRegistry } from "tokenmaster";
+
+const profile = new ModelProfile({
+  model_id: "openrouter:z-ai/glm-5.2", // canonical form: provider:model
+  provider: "openrouter",
+  window_nominal: 200_000,
+});
+
+let meter = new Meter(profile); // this meter only
+
+defaultRegistry().register(profile, ["glm-5.2"]);
+meter = Meter.forModel("z-ai/glm-5.2"); // resolves process-wide now
+```
+
+The part after the colon resolves as a bare name automatically, so the
+verbatim OpenRouter id works once the profile is registered; extra
+spellings go in the aliases argument. Later registrations win, which makes
+the same call the way to override a bundled model's capacities or pricing.
+Only window_nominal is load-bearing; pricing is optional and feeds the
+cost-model policy. Without a CalibrationRecord the gauges run against the
+nominal window and the provenance says so: "nominal (uncalibrated)".
+
 ## What is in 0.1.0
 
 - Normalized TurnUsage accounting, with the hidden consumers (reasoning
@@ -89,8 +119,8 @@ Provider adapters (Anthropic and OpenAI usage normalizers), tokenizer
 estimators, LLM-backed probe generators and judges, calibrated
 effective-capacity data (defaults equal the nominal window, and the
 provenance says so), async event delivery, and tiered long-context pricing
-in the registry. The crates.io packages of the same names are reserved
-placeholders until the Rust port lands.
+in the registry. The Rust port is live on crates.io (tokenmaster and
+ctxmaster, 0.1.0), conformant against the same vectors.
 
 ## Design
 

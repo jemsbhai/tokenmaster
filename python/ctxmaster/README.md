@@ -43,9 +43,9 @@ repository: a simulated agent accelerating from green into critical.
 
 The terminal gauge with per-turn and live rendering. Planned next: the
 advice panel rendering tokenmaster recommendations with their rationale, a
-CLI, and dashboard surfaces. The npm package of the same name is live at
-0.1.0, rendering in raw ANSI with no dependencies beyond the core; the
-crates.io packages remain reserved placeholders until the Rust port lands.
+CLI, and dashboard surfaces. The npm and crates.io packages of the same
+name are live at 0.1.0, rendering in raw ANSI with no dependencies beyond
+the core.
 
 ## License
 

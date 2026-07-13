@@ -47,6 +47,36 @@ policy = CostModelPolicy.for_profile(meter.profile)
 meter.advise(TaskContext(expected_remaining_turns=40), policy=policy)
 ```
 
+## Models outside the registry
+
+Any model works; the bundled registry is a convenience, not a gate. For an
+id the snapshot does not know (an OpenRouter route, a local runtime, a
+private deployment), build a ModelProfile and either pass it straight to
+Meter or register it once per process:
+
+```python
+from tokenmaster import Meter, ModelProfile, default_registry
+
+profile = ModelProfile(
+    model_id="openrouter:z-ai/glm-5.2",   # canonical form: provider:model
+    provider="openrouter",
+    window_nominal=200_000,
+)
+
+meter = Meter(profile)   # this meter only
+
+default_registry().register(profile, aliases=["glm-5.2"])
+meter = Meter.for_model("z-ai/glm-5.2")   # resolves process-wide now
+```
+
+The part after the colon resolves as a bare name automatically, so the
+verbatim OpenRouter id works once the profile is registered; extra
+spellings go in aliases. Later registrations win, which makes the same
+call the way to override a bundled model's capacities or pricing. Only
+window_nominal is load-bearing; pricing is optional and feeds the
+cost-model policy. Without a CalibrationRecord the gauges run against the
+nominal window and the provenance says so: "nominal (uncalibrated)".
+
 ## What is in 0.1.0
 
 - Normalized TurnUsage accounting, with the hidden consumers (reasoning
@@ -76,9 +106,9 @@ Provider adapters (Anthropic and OpenAI usage normalizers), tokenizer
 estimators, LLM-backed probe generators and judges, calibrated
 effective-capacity data (defaults equal the nominal window, and the
 provenance says so), async event delivery, and tiered long-context pricing
-in the registry. The JavaScript port is live on npm (tokenmaster and
-ctxmaster, 0.1.0) and conformant against the vectors; the crates.io
-packages remain reserved placeholders until the Rust port lands.
+in the registry. The JavaScript port (npm) and the Rust port (crates.io)
+are both live at 0.1.0, tokenmaster and ctxmaster alike, and conformant
+against the vectors.
 
 ## Design
 

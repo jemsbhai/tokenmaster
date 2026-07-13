@@ -57,7 +57,7 @@ The terminal gauge with per-turn and live rendering, ported from the Python
 wrapper with the same panel layout and display formats. Planned next: the
 advice panel rendering tokenmaster recommendations with their rationale, a
 CLI, and dashboard surfaces. The crates.io packages of the same names are
-reserved placeholders until the Rust port lands.
+live at 0.1.0.
 
 ## License
 
