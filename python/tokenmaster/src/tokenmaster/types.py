@@ -54,6 +54,254 @@ class Pricing:
 
 
 @dataclass(frozen=True)
+class PricingScope:
+    """Where a provider's pricing schedule applies.
+
+    ``basis`` names the quantity used to select a tier.  The first bundled
+    schedule uses ``request_input_tokens``: uncached input, cache reads, and
+    cache writes are all input categories and therefore all participate in
+    the threshold.
+    """
+
+    service_tier: str = "standard"
+    region: str = "global"
+    basis: str = "request_input_tokens"
+    unpriced_usage_categories: tuple[str, ...] = ()
+
+    def __post_init__(self) -> None:
+        for name in ("service_tier", "region", "basis"):
+            if not getattr(self, name).strip():
+                raise ValueError(f"{name} must be non-empty")
+        categories = tuple(self.unpriced_usage_categories)
+        allowed = {
+            "input_tokens",
+            "cache_read_tokens",
+            "cache_write_tokens",
+            "output_tokens",
+            "reasoning_tokens",
+        }
+        if len(set(categories)) != len(categories):
+            raise ValueError("unpriced usage categories must be unique")
+        if any(category not in allowed for category in categories):
+            raise ValueError("unpriced usage category is unsupported")
+        object.__setattr__(self, "unpriced_usage_categories", categories)
+
+    def to_dict(self) -> dict[str, Any]:
+        result: dict[str, Any] = {
+            "service_tier": self.service_tier,
+            "region": self.region,
+            "basis": self.basis,
+        }
+        if self.unpriced_usage_categories:
+            result["unpriced_usage_categories"] = list(
+                self.unpriced_usage_categories
+            )
+        return result
+
+    @classmethod
+    def from_dict(cls, d: Mapping[str, Any]) -> "PricingScope":
+        raw_unpriced = d.get("unpriced_usage_categories", ())
+        if not isinstance(raw_unpriced, (list, tuple)):
+            raise ValueError("unpriced_usage_categories must be an array")
+        return cls(
+            service_tier=str(d.get("service_tier", "standard")),
+            region=str(d.get("region", "global")),
+            basis=str(d.get("basis", "request_input_tokens")),
+            unpriced_usage_categories=tuple(str(value) for value in raw_unpriced),
+        )
+
+
+@dataclass(frozen=True)
+class PricingTier:
+    """One inclusive input-token threshold and the prices it activates."""
+
+    min_input_tokens: int
+    pricing: Pricing
+
+    def __post_init__(self) -> None:
+        if self.min_input_tokens < 0:
+            raise ValueError("min_input_tokens must be non-negative")
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "min_input_tokens": self.min_input_tokens,
+            "pricing": self.pricing.to_dict(),
+        }
+
+    @classmethod
+    def from_dict(cls, d: Mapping[str, Any]) -> "PricingTier":
+        pricing = d.get("pricing")
+        if not isinstance(pricing, Mapping):
+            raise ValueError("pricing tier requires a pricing object")
+        return cls(
+            min_input_tokens=int(d["min_input_tokens"]),
+            pricing=Pricing.from_dict(pricing),
+        )
+
+
+@dataclass(frozen=True)
+class PricingSchedule:
+    """A backward-compatible flat price plus optional inclusive tiers."""
+
+    base: Pricing
+    tiers: tuple[PricingTier, ...] = ()
+    scope: PricingScope = field(default_factory=PricingScope)
+
+    def __post_init__(self) -> None:
+        tiers = tuple(sorted(self.tiers, key=lambda tier: tier.min_input_tokens))
+        if len({tier.min_input_tokens for tier in tiers}) != len(tiers):
+            raise ValueError("pricing tier thresholds must be unique")
+        if any(tier.pricing.currency != self.base.currency for tier in tiers):
+            raise ValueError("all pricing tiers must use the base currency")
+        if self.scope.basis != "request_input_tokens":
+            raise ValueError("unsupported pricing scope basis")
+        object.__setattr__(self, "tiers", tiers)
+
+    def price_for(self, input_tokens: int) -> tuple[Pricing, int | None]:
+        """Return the price and selected inclusive tier threshold."""
+        if input_tokens < 0:
+            raise ValueError("input_tokens must be non-negative")
+        selected = self.base
+        selected_min: int | None = None
+        for tier in self.tiers:
+            if input_tokens < tier.min_input_tokens:
+                break
+            selected = tier.pricing
+            selected_min = tier.min_input_tokens
+        return selected, selected_min
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "base": self.base.to_dict(),
+            "tiers": [tier.to_dict() for tier in self.tiers],
+            "scope": self.scope.to_dict(),
+        }
+
+    @classmethod
+    def from_dict(cls, d: Mapping[str, Any]) -> "PricingSchedule":
+        base = d.get("base")
+        if not isinstance(base, Mapping):
+            raise ValueError("pricing schedule requires a base pricing object")
+        raw_tiers = d.get("tiers", ())
+        if not isinstance(raw_tiers, (list, tuple)):
+            raise ValueError("pricing schedule tiers must be an array")
+        raw_scope = d.get("scope", {})
+        if not isinstance(raw_scope, Mapping):
+            raise ValueError("pricing schedule scope must be an object")
+        return cls(
+            base=Pricing.from_dict(base),
+            tiers=tuple(PricingTier.from_dict(tier) for tier in raw_tiers),
+            scope=PricingScope.from_dict(raw_scope),
+        )
+
+
+@dataclass(frozen=True)
+class CostQuote:
+    """A priced, exclusive ``TurnUsage`` with tier provenance."""
+
+    model_id: str
+    tier_basis_tokens: int
+    tier_min_input_tokens: int | None
+    pricing: Pricing
+    input_cost: float
+    cache_read_cost: float
+    cache_write_cost: float
+    output_cost: float
+    reasoning_cost: float
+    total_cost: float
+    currency: str
+    as_of: str | None
+    source: str
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "model_id": self.model_id,
+            "tier_basis_tokens": self.tier_basis_tokens,
+            "tier_min_input_tokens": self.tier_min_input_tokens,
+            "pricing": self.pricing.to_dict(),
+            "input_cost": self.input_cost,
+            "cache_read_cost": self.cache_read_cost,
+            "cache_write_cost": self.cache_write_cost,
+            "output_cost": self.output_cost,
+            "reasoning_cost": self.reasoning_cost,
+            "total_cost": self.total_cost,
+            "currency": self.currency,
+            "as_of": self.as_of,
+            "source": self.source,
+        }
+
+
+@dataclass(frozen=True)
+class CostEstimate:
+    """Conservative request-cost reservation with explicit assumptions."""
+
+    model_id: str
+    tier_basis_tokens: int
+    tier_min_input_tokens: int | None
+    pricing: Pricing
+    input_tokens: int
+    reserved_output_tokens: int
+    input_rate_kind: str
+    input_rate: float
+    output_rate: float
+    input_cost: float
+    output_cost: float
+    total_cost: float
+    currency: str
+    as_of: str | None
+    source: str
+    conservative: bool
+    assumptions: tuple[str, ...]
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "model_id": self.model_id,
+            "tier_basis_tokens": self.tier_basis_tokens,
+            "tier_min_input_tokens": self.tier_min_input_tokens,
+            "pricing": self.pricing.to_dict(),
+            "input_tokens": self.input_tokens,
+            "reserved_output_tokens": self.reserved_output_tokens,
+            "input_rate_kind": self.input_rate_kind,
+            "input_rate": self.input_rate,
+            "output_rate": self.output_rate,
+            "input_cost": self.input_cost,
+            "output_cost": self.output_cost,
+            "total_cost": self.total_cost,
+            "currency": self.currency,
+            "as_of": self.as_of,
+            "source": self.source,
+            "conservative": self.conservative,
+            "assumptions": list(self.assumptions),
+        }
+
+
+@dataclass(frozen=True)
+class LimitCheck:
+    """Result of validating a request against one model capacity."""
+
+    model_id: str
+    capacity_kind: str
+    capacity: int
+    input_tokens: int
+    requested_output_tokens: int | None
+    reserved_output_tokens: int
+    context_output_tokens: int
+    context_tokens: int
+    max_input_tokens: int
+    max_output_tokens: int | None
+    input_exceeded: bool
+    context_exceeded: bool
+    output_exceeded: bool
+    allowed: bool
+    violations: tuple[str, ...] = ()
+
+    def to_dict(self) -> dict[str, Any]:
+        d = asdict(self)
+        d["violations"] = list(self.violations)
+        return d
+
+
+@dataclass(frozen=True)
 class CalibrationRecord:
     """Measured effective capacity for one model."""
 

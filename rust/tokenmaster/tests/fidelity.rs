@@ -5,9 +5,9 @@ use std::collections::HashMap;
 
 use serde_json::json;
 use tokenmaster::{
-    evaluate_handoff, evaluate_handoff_with, Answerer, Error, EvaluateOptions, Event,
-    EventKind, ExactMatchJudge, FidelityReport, Judge, Meter, ModelProfile, Probe,
-    ProbeCategory, ProbeGenerator,
+    evaluate_handoff, evaluate_handoff_with, Answerer, Error, EvaluateOptions, Event, EventKind,
+    ExactMatchJudge, FidelityReport, Judge, Meter, ModelProfile, Probe, ProbeCategory,
+    ProbeGenerator,
 };
 
 fn probe(id: &str, category: ProbeCategory, question: &str, gold: &str, weight: f64) -> Probe {
@@ -30,7 +30,13 @@ fn probes() -> Vec<Probe> {
             "MIT",
             1.0,
         ),
-        probe("p3", ProbeCategory::State, "How many tests pass?", "80", 1.0),
+        probe(
+            "p3",
+            ProbeCategory::State,
+            "How many tests pass?",
+            "80",
+            1.0,
+        ),
     ]
 }
 

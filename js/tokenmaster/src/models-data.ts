@@ -3,7 +3,38 @@
 // Regenerate with: npm run embed:models
 export const MODELS_DATA: unknown = {
   "schema_version": "0.1",
-  "snapshot_date": "2026-07-07",
+  "snapshot_date": "2026-07-31",
+  "provider_discovery": {
+    "openai": {
+      "catalog_source": "https://developers.openai.com/api/docs/models/all.md",
+      "pricing_source": "https://developers.openai.com/api/docs/pricing.md",
+      "known_unregistered_models": [
+        "openai:babbage-002",
+        "openai:davinci-002",
+        "openai:gpt-3.5-turbo",
+        "openai:gpt-4.1",
+        "openai:gpt-4.1-mini",
+        "openai:gpt-4.1-nano",
+        "openai:gpt-4o",
+        "openai:gpt-4o-mini",
+        "openai:gpt-5",
+        "openai:gpt-5-mini",
+        "openai:gpt-5-nano",
+        "openai:gpt-5-pro",
+        "openai:gpt-5.1",
+        "openai:gpt-5.2-pro",
+        "openai:gpt-5.4-nano",
+        "openai:gpt-5.4-pro",
+        "openai:gpt-5.5-pro",
+        "openai:o1",
+        "openai:o1-pro",
+        "openai:o3",
+        "openai:o3-mini",
+        "openai:o3-pro",
+        "openai:o4-mini"
+      ]
+    }
+  },
   "models": [
     {
       "model_id": "anthropic:claude-fable-5",
@@ -12,9 +43,9 @@ export const MODELS_DATA: unknown = {
       "window_nominal": 1000000,
       "max_output": 128000,
       "pricing": {
-        "input": 10,
-        "output": 50,
-        "cache_read": 1,
+        "input": 10.0,
+        "output": 50.0,
+        "cache_read": 1.0,
         "cache_write": 12.5,
         "currency": "USD",
         "as_of": "2026-07-07"
@@ -29,8 +60,8 @@ export const MODELS_DATA: unknown = {
       "window_nominal": 1000000,
       "max_output": null,
       "pricing": {
-        "input": 5,
-        "output": 25,
+        "input": 5.0,
+        "output": 25.0,
         "cache_read": 0.5,
         "cache_write": 6.25,
         "currency": "USD",
@@ -46,8 +77,8 @@ export const MODELS_DATA: unknown = {
       "window_nominal": 1000000,
       "max_output": null,
       "pricing": {
-        "input": 2,
-        "output": 10,
+        "input": 2.0,
+        "output": 10.0,
         "cache_read": 0.2,
         "cache_write": 2.5,
         "currency": "USD",
@@ -63,8 +94,8 @@ export const MODELS_DATA: unknown = {
       "window_nominal": 1000000,
       "max_output": null,
       "pricing": {
-        "input": 3,
-        "output": 15,
+        "input": 3.0,
+        "output": 15.0,
         "cache_read": 0.3,
         "cache_write": 3.75,
         "currency": "USD",
@@ -80,8 +111,8 @@ export const MODELS_DATA: unknown = {
       "window_nominal": 200000,
       "max_output": null,
       "pricing": {
-        "input": 1,
-        "output": 5,
+        "input": 1.0,
+        "output": 5.0,
         "cache_read": 0.1,
         "cache_write": 1.25,
         "currency": "USD",
@@ -91,21 +122,146 @@ export const MODELS_DATA: unknown = {
       "source": "platform.claude.com pricing docs and July 2026 trackers; cache_write is the 5-minute rate (1.25x input)"
     },
     {
+      "model_id": "openai:gpt-5.6-sol",
+      "provider": "openai",
+      "aliases": [
+        "gpt-5.6"
+      ],
+      "window_nominal": 1050000,
+      "max_output": 128000,
+      "pricing": {
+        "input": 5.0,
+        "output": 30.0,
+        "cache_read": 0.5,
+        "cache_write": 6.25,
+        "currency": "USD",
+        "as_of": "2026-07-31"
+      },
+      "pricing_tiers": [
+        {
+          "min_input_tokens": 272001,
+          "pricing": {
+            "input": 10.0,
+            "output": 45.0,
+            "cache_read": 1.0,
+            "cache_write": 12.5,
+            "currency": "USD",
+            "as_of": "2026-07-31"
+          }
+        }
+      ],
+      "pricing_scope": {
+        "service_tier": "standard",
+        "region": "global",
+        "basis": "request_input_tokens"
+      },
+      "tokenizer_hint": null,
+      "source": "https://developers.openai.com/api/docs/models/gpt-5.6-sol (verified 2026-07-31); standard short- and long-context prices cross-checked against https://developers.openai.com/api/docs/pricing; cache_write is 1.25x uncached input"
+    },
+    {
+      "model_id": "openai:gpt-5.6-terra",
+      "provider": "openai",
+      "aliases": [],
+      "window_nominal": 1050000,
+      "max_output": 128000,
+      "pricing": {
+        "input": 2.0,
+        "output": 12.0,
+        "cache_read": 0.2,
+        "cache_write": 2.5,
+        "currency": "USD",
+        "as_of": "2026-07-31"
+      },
+      "pricing_tiers": [
+        {
+          "min_input_tokens": 272001,
+          "pricing": {
+            "input": 4.0,
+            "output": 18.0,
+            "cache_read": 0.4,
+            "cache_write": 5.0,
+            "currency": "USD",
+            "as_of": "2026-07-31"
+          }
+        }
+      ],
+      "pricing_scope": {
+        "service_tier": "standard",
+        "region": "global",
+        "basis": "request_input_tokens"
+      },
+      "tokenizer_hint": null,
+      "source": "https://developers.openai.com/api/docs/models/gpt-5.6-terra (verified 2026-07-31); standard short- and long-context prices cross-checked against https://developers.openai.com/api/docs/pricing; cache_write is 1.25x uncached input"
+    },
+    {
+      "model_id": "openai:gpt-5.6-luna",
+      "provider": "openai",
+      "aliases": [],
+      "window_nominal": 1050000,
+      "max_output": 128000,
+      "pricing": {
+        "input": 0.2,
+        "output": 1.2,
+        "cache_read": 0.02,
+        "cache_write": 0.25,
+        "currency": "USD",
+        "as_of": "2026-07-31"
+      },
+      "pricing_tiers": [
+        {
+          "min_input_tokens": 272001,
+          "pricing": {
+            "input": 0.4,
+            "output": 1.8,
+            "cache_read": 0.04,
+            "cache_write": 0.5,
+            "currency": "USD",
+            "as_of": "2026-07-31"
+          }
+        }
+      ],
+      "pricing_scope": {
+        "service_tier": "standard",
+        "region": "global",
+        "basis": "request_input_tokens"
+      },
+      "tokenizer_hint": null,
+      "source": "https://developers.openai.com/api/docs/models/gpt-5.6-luna (verified 2026-07-31); standard short- and long-context prices cross-checked against https://developers.openai.com/api/docs/pricing; cache_write is 1.25x uncached input"
+    },
+    {
       "model_id": "openai:gpt-5.5",
       "provider": "openai",
       "aliases": [],
       "window_nominal": 1050000,
       "max_output": 128000,
       "pricing": {
-        "input": 5,
-        "output": 30,
+        "input": 5.0,
+        "output": 30.0,
         "cache_read": 0.5,
-        "cache_write": 0,
+        "cache_write": 0.0,
         "currency": "USD",
         "as_of": "2026-07-07"
       },
+      "pricing_tiers": [
+        {
+          "min_input_tokens": 272001,
+          "pricing": {
+            "input": 10.0,
+            "output": 45.0,
+            "cache_read": 1.0,
+            "cache_write": 0.0,
+            "currency": "USD",
+            "as_of": "2026-07-31"
+          }
+        }
+      ],
+      "pricing_scope": {
+        "service_tier": "standard",
+        "region": "global",
+        "basis": "request_input_tokens"
+      },
       "tokenizer_hint": null,
-      "source": "developers.openai.com model page, 2026; long-context surcharge above 272K input (2x input, 1.5x output) not modeled in flat pricing; OpenAI charges no cache-write fee"
+      "source": "https://developers.openai.com/api/docs/models/gpt-5.5 and https://developers.openai.com/api/docs/pricing (verified 2026-07-31); standard long-context tier begins above 272K input; no separate cache-write price is listed"
     },
     {
       "model_id": "openai:gpt-5.4",
@@ -115,31 +271,49 @@ export const MODELS_DATA: unknown = {
       "max_output": 128000,
       "pricing": {
         "input": 2.5,
-        "output": 15,
+        "output": 15.0,
         "cache_read": 0.25,
-        "cache_write": 0,
+        "cache_write": 0.0,
         "currency": "USD",
         "as_of": "2026-07-07"
       },
+      "pricing_tiers": [
+        {
+          "min_input_tokens": 272001,
+          "pricing": {
+            "input": 5.0,
+            "output": 22.5,
+            "cache_read": 0.5,
+            "cache_write": 0.0,
+            "currency": "USD",
+            "as_of": "2026-07-31"
+          }
+        }
+      ],
+      "pricing_scope": {
+        "service_tier": "standard",
+        "region": "global",
+        "basis": "request_input_tokens"
+      },
       "tokenizer_hint": null,
-      "source": "developers.openai.com model page, 2026; long-context surcharge above 272K input (2x input, 1.5x output) not modeled in flat pricing; OpenAI charges no cache-write fee"
+      "source": "https://developers.openai.com/api/docs/models/gpt-5.4 and https://developers.openai.com/api/docs/pricing (verified 2026-07-31); standard long-context tier begins above 272K input; no separate cache-write price is listed"
     },
     {
       "model_id": "openai:gpt-5.4-mini",
       "provider": "openai",
       "aliases": [],
       "window_nominal": 400000,
-      "max_output": null,
+      "max_output": 128000,
       "pricing": {
         "input": 0.75,
         "output": 4.5,
         "cache_read": 0.075,
-        "cache_write": 0,
+        "cache_write": 0.0,
         "currency": "USD",
-        "as_of": "2026-07-07"
+        "as_of": "2026-07-31"
       },
       "tokenizer_hint": null,
-      "source": "OpenAI pricing trackers, June 2026; cache_read assumed at the 10 percent pattern, unverified; OpenAI charges no cache-write fee"
+      "source": "https://developers.openai.com/api/docs/models/gpt-5.4-mini (verified 2026-07-31); regional processing endpoints add 10%; no cache-write price is listed"
     },
     {
       "model_id": "openai:gpt-5.2",
@@ -149,9 +323,9 @@ export const MODELS_DATA: unknown = {
       "max_output": 128000,
       "pricing": {
         "input": 1.75,
-        "output": 14,
+        "output": 14.0,
         "cache_read": 0.175,
-        "cache_write": 0,
+        "cache_write": 0.0,
         "currency": "USD",
         "as_of": "2026-07-07"
       },
@@ -162,37 +336,67 @@ export const MODELS_DATA: unknown = {
       "model_id": "google:gemini-3.1-pro",
       "provider": "google",
       "aliases": [
-        "gemini-3.1-pro-preview"
+        "gemini-3.1-pro-preview",
+        "gemini-3.1-pro-preview-customtools"
       ],
       "window_nominal": 1048576,
-      "max_output": null,
+      "max_output": 65536,
       "pricing": {
-        "input": 2,
-        "output": 12,
+        "input": 2.0,
+        "output": 12.0,
         "cache_read": 0.2,
-        "cache_write": 0,
+        "cache_write": 0.0,
         "currency": "USD",
-        "as_of": "2026-07-07"
+        "as_of": "2026-07-31"
+      },
+      "pricing_tiers": [
+        {
+          "min_input_tokens": 200001,
+          "pricing": {
+            "input": 4.0,
+            "output": 18.0,
+            "cache_read": 0.4,
+            "cache_write": 0.0,
+            "currency": "USD",
+            "as_of": "2026-07-31"
+          }
+        }
+      ],
+      "pricing_scope": {
+        "service_tier": "standard",
+        "region": "global",
+        "basis": "request_input_tokens",
+        "unpriced_usage_categories": [
+          "cache_write_tokens"
+        ]
       },
       "tokenizer_hint": null,
-      "source": "ai.google.dev pricing, prompts up to 200K; tiered rate above 200K (4.0/18.0) not modeled in flat pricing; cache storage fees per hour not modeled; max_output reports conflict (64K vs 128K) so left null"
+      "source": "https://ai.google.dev/gemini-api/docs/models/gemini-3.1-pro-preview (limits verified 2026-07-31); pricing: https://ai.google.dev/gemini-api/docs/pricing (Standard prices are tiered above 200K prompt tokens; explicit cache storage is billed per token-hour; cache_write=0 is a legacy placeholder and the schedule marks it unpriced)"
     },
     {
       "model_id": "google:gemini-3.5-flash",
       "provider": "google",
       "aliases": [],
-      "window_nominal": 1000000,
-      "max_output": 64000,
+      "window_nominal": 1048576,
+      "max_output": 65536,
       "pricing": {
         "input": 1.5,
-        "output": 9,
+        "output": 9.0,
         "cache_read": 0.15,
-        "cache_write": 0,
+        "cache_write": 0.0,
         "currency": "USD",
-        "as_of": "2026-07-07"
+        "as_of": "2026-07-31"
+      },
+      "pricing_scope": {
+        "service_tier": "standard",
+        "region": "global",
+        "basis": "request_input_tokens",
+        "unpriced_usage_categories": [
+          "cache_write_tokens"
+        ]
       },
       "tokenizer_hint": null,
-      "source": "ai.google.dev pricing, launched Google I/O May 2026; cache storage fees per hour not modeled"
+      "source": "https://ai.google.dev/gemini-api/docs/models/gemini-3.5-flash (limits verified 2026-07-31); pricing: https://ai.google.dev/gemini-api/docs/pricing (Standard pricing verified 2026-07-31; explicit cache storage is billed per token-hour; cache_write=0 is a legacy placeholder and the schedule marks it unpriced)"
     },
     {
       "model_id": "deepseek:deepseek-v4",

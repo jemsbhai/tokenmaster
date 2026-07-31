@@ -51,13 +51,13 @@ options: `new ContextGauge({ write: sink, colors: false })`, and
 A runnable demonstration lives at `examples/demo.mjs` in the repository: a
 simulated agent accelerating from green into critical.
 
-## What is in 0.1.0
+## What is in 0.1.1
 
 The terminal gauge with per-turn and live rendering, ported from the Python
-wrapper with the same panel layout and display formats. Planned next: the
+wrapper with the same panel layout and display formats, compatible with
+Tokenmaster 0.1 and 0.2. Planned next: the
 advice panel rendering tokenmaster recommendations with their rationale, a
-CLI, and dashboard surfaces. The crates.io packages of the same names are
-live at 0.1.0.
+CLI, and dashboard surfaces.
 
 ## License
 

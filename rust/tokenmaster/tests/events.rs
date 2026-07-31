@@ -371,7 +371,10 @@ fn events_slice_replays_all_in_order() {
     record_total(&mut m, 500);
     record_total(&mut m, 720);
     let types: Vec<&str> = m.events().iter().map(|e| e.event_type()).collect();
-    assert_eq!(types, vec!["turn_recorded", "turn_recorded", "zone_changed"]);
+    assert_eq!(
+        types,
+        vec!["turn_recorded", "turn_recorded", "zone_changed"]
+    );
 }
 
 #[test]

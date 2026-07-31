@@ -22,7 +22,14 @@ import {
   MeterState,
   ModelProfile,
   Pricing,
+  PricingSchedule,
 } from "./types.js";
+import {
+  defaultRegistry,
+  getPricingSchedule,
+  UnknownModelError,
+} from "./registry.js";
+import type { Registry } from "./registry.js";
 
 // ---------------------------------------------------------------------------
 // coercion and formatting helpers
@@ -635,6 +642,7 @@ const UNIT_PRICES: readonly [number, number, number, number] = [
 
 export interface CostModelPolicyOptions {
   pricing?: Pricing | null;
+  pricing_schedule?: PricingSchedule | null;
   compaction_ratio?: number;
   summary_output_ratio?: number;
   handoff_prompt_ratio?: number;
@@ -671,6 +679,7 @@ export interface CostModelPolicyOptions {
  */
 export class CostModelPolicy implements Policy {
   readonly pricing: Pricing | null;
+  readonly pricing_schedule: PricingSchedule | null;
   readonly compaction_ratio: number;
   readonly summary_output_ratio: number;
   readonly handoff_prompt_ratio: number;
@@ -712,7 +721,26 @@ export class CostModelPolicy implements Policy {
     if (default_horizon < 1) {
       throw new RangeError("default_horizon must be at least 1");
     }
-    this.pricing = options.pricing ?? null;
+    if (
+      options.pricing !== null &&
+      options.pricing !== undefined &&
+      options.pricing_schedule !== null &&
+      options.pricing_schedule !== undefined &&
+      JSON.stringify(options.pricing.toDict()) !==
+        JSON.stringify(options.pricing_schedule.base.toDict())
+    ) {
+      throw new RangeError("pricing must equal pricing_schedule.base");
+    }
+    const unpricedCategories =
+      options.pricing_schedule?.scope.unpriced_usage_categories ?? [];
+    if (unpricedCategories.length > 0) {
+      throw new RangeError(
+        "CostModelPolicy requires a complete pricing schedule; " +
+          `unpriced usage categories: ${unpricedCategories.join(", ")}`
+      );
+    }
+    this.pricing_schedule = options.pricing_schedule ?? null;
+    this.pricing = options.pricing ?? this.pricing_schedule?.base ?? null;
     this.compaction_ratio = compaction_ratio;
     this.summary_output_ratio = summary_output_ratio;
     this.handoff_prompt_ratio = handoff_prompt_ratio;
@@ -728,10 +756,62 @@ export class CostModelPolicy implements Policy {
     profile: ModelProfile,
     options: Omit<CostModelPolicyOptions, "pricing"> = {}
   ): CostModelPolicy {
-    return new CostModelPolicy({ ...options, pricing: profile.pricing });
+    let schedule = options.pricing_schedule ?? null;
+    if (schedule === null) {
+      try {
+        const candidate = getPricingSchedule(profile.model_id);
+        if (
+          candidate !== null &&
+          profile.pricing !== null &&
+          JSON.stringify(candidate.base.toDict()) ===
+            JSON.stringify(profile.pricing.toDict())
+        ) {
+          schedule = candidate;
+        }
+      } catch (error) {
+        if (!(error instanceof UnknownModelError)) {
+          throw error;
+        }
+      }
+    }
+    return new CostModelPolicy({
+      ...options,
+      pricing: profile.pricing,
+      pricing_schedule: schedule,
+    });
   }
 
-  private _perTokenPrices(): [number, number, number, number, string] {
+  /** Construct with a bundled profile and its complete tiered schedule. */
+  static forModel(
+    modelId: string,
+    options: Omit<CostModelPolicyOptions, "pricing" | "pricing_schedule"> & {
+      registry?: Registry;
+    } = {}
+  ): CostModelPolicy {
+    const { registry = defaultRegistry(), ...policyOptions } = options;
+    const profile = registry.get(modelId);
+    return new CostModelPolicy({
+      ...policyOptions,
+      pricing: profile.pricing,
+      pricing_schedule: registry.getPricingSchedule(modelId),
+    });
+  }
+
+  private _perTokenPrices(
+    inputTokens: number
+  ): [number, number, number, number, string, number | null] {
+    if (this.pricing_schedule !== null) {
+      const resolved = this.pricing_schedule.resolve(inputTokens);
+      const p = resolved.pricing;
+      return [
+        p.input / 1e6,
+        p.output / 1e6,
+        p.cache_read / 1e6,
+        p.cache_write / 1e6,
+        p.currency,
+        resolved.tier_min_input_tokens,
+      ];
+    }
     if (this.pricing !== null) {
       const p = this.pricing;
       return [
@@ -740,17 +820,17 @@ export class CostModelPolicy implements Policy {
         p.cache_read / 1e6,
         p.cache_write / 1e6,
         p.currency,
+        null,
       ];
     }
     const [i, o, cr, cw] = UNIT_PRICES;
-    return [i, o, cr, cw, "token-units"];
+    return [i, o, cr, cw, "token-units", null];
   }
 
   evaluate(
     state: MeterState,
     task: TaskContext | null = null
   ): Recommendation {
-    const [pIn, pOut, pCr, pCw, unit] = this._perTokenPrices();
     const horizon = task ? task.expected_remaining_turns : null;
     const horizonSource = horizon !== null ? "task" : "default";
     const k = horizon !== null ? horizon : this.default_horizon;
@@ -759,15 +839,27 @@ export class CostModelPolicy implements Policy {
     const tPost = Math.trunc(tPre * this.compaction_ratio);
     const tSum = Math.trunc(tPre * this.summary_output_ratio);
     const tHand = Math.trunc(tPre * this.handoff_prompt_ratio);
+    const [pInPre, pOutPre, pCrPre, _pCwPre, unit, preTier] =
+      this._perTokenPrices(tPre);
+    const [_pInPost, _pOutPost, pCrPost, pCwPost, postUnit, postTier] =
+      this._perTokenPrices(tPost);
+    const [_pInHand, _pOutHand, pCrHand, pCwHand, handUnit, handTier] =
+      this._perTokenPrices(tHand);
+    if (postUnit !== unit || handUnit !== unit) {
+      throw new RangeError("pricing schedule currencies must match");
+    }
 
     const inputs: Record<string, unknown> = {
       t_pre: tPre,
       velocity: state.velocity,
       horizon: k,
       horizon_source: horizonSource,
-      prices_per_mtok: this.pricing
-        ? this.pricing.toDict()
-        : "unit ratios (provisional)",
+      prices_per_mtok:
+        this.pricing_schedule !== null
+          ? this.pricing_schedule.toDict()
+          : this.pricing
+            ? this.pricing.toDict()
+            : "unit ratios (provisional)",
       compaction_ratio: this.compaction_ratio,
       summary_output_ratio: this.summary_output_ratio,
       handoff_prompt_ratio: this.handoff_prompt_ratio,
@@ -800,12 +892,14 @@ export class CostModelPolicy implements Policy {
       });
     }
 
-    const savingPerTurnCompact = (tPre - tPost) * pCr;
-    const savingPerTurnHandoff = (tPre - tHand) * pCr;
-    const oneTimeCompact = tSum * pOut + tPost * (pCw - pCr);
-    const oneTimeHandoff = tHand * pOut + tHand * (pCw - pCr);
-    const infoCompact = this.expected_compaction_loss * tPre * pIn;
-    const infoHandoff = this.expected_handoff_loss * tPre * pIn;
+    const savingPerTurnCompact = tPre * pCrPre - tPost * pCrPost;
+    const savingPerTurnHandoff = tPre * pCrPre - tHand * pCrHand;
+    const oneTimeCompact =
+      tSum * pOutPre + tPost * (pCwPost - pCrPost);
+    const oneTimeHandoff =
+      tHand * pOutPre + tHand * (pCwHand - pCrHand);
+    const infoCompact = this.expected_compaction_loss * tPre * pInPre;
+    const infoHandoff = this.expected_handoff_loss * tPre * pInPre;
 
     const kStar =
       savingPerTurnCompact > 0 ? oneTimeCompact / savingPerTurnCompact : null;
@@ -897,6 +991,9 @@ export class CostModelPolicy implements Policy {
           t_post: tPost,
           t_sum: tSum,
           t_hand: tHand,
+          pre_tier_min_input_tokens: preTier,
+          post_tier_min_input_tokens: postTier,
+          handoff_tier_min_input_tokens: handTier,
         },
         comparison,
       }),

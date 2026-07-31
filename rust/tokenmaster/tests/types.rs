@@ -243,7 +243,10 @@ fn from_value_applies_dict_truthiness_to_nested_objects() {
         "window_nominal": 10_000,
         "pricing": "junk"
     });
-    assert!(matches!(ModelProfile::from_value(&bad), Err(Error::Parse(_))));
+    assert!(matches!(
+        ModelProfile::from_value(&bad),
+        Err(Error::Parse(_))
+    ));
 }
 
 #[test]

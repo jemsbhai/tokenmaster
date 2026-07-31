@@ -140,8 +140,12 @@ pub struct ProbeOutcome {
 fn req_bool(d: &serde_json::Map<String, Value>, key: &str, ctx: &str) -> Result<bool, Error> {
     match d.get(key) {
         Some(Value::Bool(b)) => Ok(*b),
-        Some(_) => Err(Error::Parse(format!("{ctx}: field '{key}' is not a boolean"))),
-        None => Err(Error::Parse(format!("{ctx}: missing required field '{key}'"))),
+        Some(_) => Err(Error::Parse(format!(
+            "{ctx}: field '{key}' is not a boolean"
+        ))),
+        None => Err(Error::Parse(format!(
+            "{ctx}: missing required field '{key}'"
+        ))),
     }
 }
 
@@ -282,7 +286,10 @@ pub trait Judge: Send + Sync {
 }
 
 fn normalize(s: &str) -> String {
-    s.to_lowercase().split_whitespace().collect::<Vec<_>>().join(" ")
+    s.to_lowercase()
+        .split_whitespace()
+        .collect::<Vec<_>>()
+        .join(" ")
 }
 
 /// Lenient normalized containment: correct when the normalized gold answer

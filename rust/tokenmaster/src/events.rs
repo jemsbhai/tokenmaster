@@ -29,8 +29,8 @@ use serde_json::{Map, Value};
 use crate::advisor::Recommendation;
 use crate::fidelity::FidelityReport;
 use crate::types::{
-    as_map, opt_i64, req_f64, req_string, req_value, string_or, Error, MeterState, TurnUsage,
-    Zone, SCHEMA_VERSION,
+    as_map, opt_i64, req_f64, req_string, req_value, string_or, Error, MeterState, TurnUsage, Zone,
+    SCHEMA_VERSION,
 };
 
 // ------------------------------------------------------------------------ //
@@ -82,6 +82,10 @@ pub struct Event {
 
 /// Typed payloads. Wire tag is `event_type`, payload fields nest under
 /// `payload`.
+// Wire/API parity keeps event payloads inline. Boxing only the large variant
+// would make callers construct a different public shape in Rust than in the
+// Python and JavaScript ports.
+#[allow(clippy::large_enum_variant)]
 #[derive(Debug, Clone, PartialEq, Serialize)]
 #[serde(tag = "event_type", content = "payload", rename_all = "snake_case")]
 pub enum EventKind {

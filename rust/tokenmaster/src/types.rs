@@ -113,14 +113,18 @@ fn to_i64(v: &Value, ctx: &str, key: &str) -> Result<i64, Error> {
                 // Python int() truncates toward zero.
                 Ok(f.trunc() as i64)
             } else {
-                Err(Error::Parse(format!("{ctx}: field '{key}' is not an integer")))
+                Err(Error::Parse(format!(
+                    "{ctx}: field '{key}' is not an integer"
+                )))
             }
         }
         Value::String(s) => s
             .trim()
             .parse::<i64>()
             .map_err(|_| Error::Parse(format!("{ctx}: field '{key}' is not an integer"))),
-        _ => Err(Error::Parse(format!("{ctx}: field '{key}' is not an integer"))),
+        _ => Err(Error::Parse(format!(
+            "{ctx}: field '{key}' is not an integer"
+        ))),
     }
 }
 
@@ -133,7 +137,9 @@ pub(crate) fn to_f64(v: &Value, ctx: &str, key: &str) -> Result<f64, Error> {
             .trim()
             .parse::<f64>()
             .map_err(|_| Error::Parse(format!("{ctx}: field '{key}' is not a number"))),
-        _ => Err(Error::Parse(format!("{ctx}: field '{key}' is not a number"))),
+        _ => Err(Error::Parse(format!(
+            "{ctx}: field '{key}' is not a number"
+        ))),
     }
 }
 
@@ -142,18 +148,27 @@ fn to_scalar_string(v: &Value, ctx: &str, key: &str) -> Result<String, Error> {
         Value::String(s) => Ok(s.clone()),
         Value::Number(n) => Ok(n.to_string()),
         Value::Bool(b) => Ok(b.to_string()),
-        _ => Err(Error::Parse(format!("{ctx}: field '{key}' is not a string"))),
+        _ => Err(Error::Parse(format!(
+            "{ctx}: field '{key}' is not a string"
+        ))),
     }
 }
 
-fn req_i64(d: &Map<String, Value>, key: &str, ctx: &str) -> Result<i64, Error> {
+pub(crate) fn req_i64(d: &Map<String, Value>, key: &str, ctx: &str) -> Result<i64, Error> {
     match d.get(key) {
-        None => Err(Error::Parse(format!("{ctx}: missing required field '{key}'"))),
+        None => Err(Error::Parse(format!(
+            "{ctx}: missing required field '{key}'"
+        ))),
         Some(v) => to_i64(v, ctx, key),
     }
 }
 
-pub(crate) fn i64_or(d: &Map<String, Value>, key: &str, default: i64, ctx: &str) -> Result<i64, Error> {
+pub(crate) fn i64_or(
+    d: &Map<String, Value>,
+    key: &str,
+    default: i64,
+    ctx: &str,
+) -> Result<i64, Error> {
     match d.get(key) {
         None | Some(Value::Null) => Ok(default),
         Some(v) => to_i64(v, ctx, key),
@@ -169,12 +184,19 @@ pub(crate) fn opt_i64(d: &Map<String, Value>, key: &str, ctx: &str) -> Result<Op
 
 pub(crate) fn req_f64(d: &Map<String, Value>, key: &str, ctx: &str) -> Result<f64, Error> {
     match d.get(key) {
-        None => Err(Error::Parse(format!("{ctx}: missing required field '{key}'"))),
+        None => Err(Error::Parse(format!(
+            "{ctx}: missing required field '{key}'"
+        ))),
         Some(v) => to_f64(v, ctx, key),
     }
 }
 
-pub(crate) fn f64_or(d: &Map<String, Value>, key: &str, default: f64, ctx: &str) -> Result<f64, Error> {
+pub(crate) fn f64_or(
+    d: &Map<String, Value>,
+    key: &str,
+    default: f64,
+    ctx: &str,
+) -> Result<f64, Error> {
     match d.get(key) {
         None | Some(Value::Null) => Ok(default),
         Some(v) => to_f64(v, ctx, key),
@@ -190,19 +212,30 @@ pub(crate) fn opt_f64(d: &Map<String, Value>, key: &str, ctx: &str) -> Result<Op
 
 pub(crate) fn req_string(d: &Map<String, Value>, key: &str, ctx: &str) -> Result<String, Error> {
     match d.get(key) {
-        None => Err(Error::Parse(format!("{ctx}: missing required field '{key}'"))),
+        None => Err(Error::Parse(format!(
+            "{ctx}: missing required field '{key}'"
+        ))),
         Some(v) => to_scalar_string(v, ctx, key),
     }
 }
 
-pub(crate) fn string_or(d: &Map<String, Value>, key: &str, default: &str, ctx: &str) -> Result<String, Error> {
+pub(crate) fn string_or(
+    d: &Map<String, Value>,
+    key: &str,
+    default: &str,
+    ctx: &str,
+) -> Result<String, Error> {
     match d.get(key) {
         None | Some(Value::Null) => Ok(default.to_string()),
         Some(v) => to_scalar_string(v, ctx, key),
     }
 }
 
-pub(crate) fn opt_string(d: &Map<String, Value>, key: &str, ctx: &str) -> Result<Option<String>, Error> {
+pub(crate) fn opt_string(
+    d: &Map<String, Value>,
+    key: &str,
+    ctx: &str,
+) -> Result<Option<String>, Error> {
     match d.get(key) {
         None | Some(Value::Null) => Ok(None),
         Some(v) => Ok(Some(to_scalar_string(v, ctx, key)?)),
@@ -221,7 +254,9 @@ fn truthy_object<'a>(
         None => Ok(None),
         Some(v) if is_falsy(v) => Ok(None),
         Some(Value::Object(o)) => Ok(Some(o)),
-        Some(_) => Err(Error::Parse(format!("{ctx}: field '{key}' is not an object"))),
+        Some(_) => Err(Error::Parse(format!(
+            "{ctx}: field '{key}' is not an object"
+        ))),
     }
 }
 
@@ -244,7 +279,9 @@ fn provenance_map(d: &Map<String, Value>, ctx: &str) -> Result<BTreeMap<String, 
             }
             Ok(out)
         }
-        Some(_) => Err(Error::Parse(format!("{ctx}: field 'provenance' is not an object"))),
+        Some(_) => Err(Error::Parse(format!(
+            "{ctx}: field 'provenance' is not an object"
+        ))),
     }
 }
 
@@ -310,7 +347,9 @@ impl FromStr for UsageSource {
             "reported" => Ok(UsageSource::Reported),
             "estimated" => Ok(UsageSource::Estimated),
             "mixed" => Ok(UsageSource::Mixed),
-            other => Err(Error::Value(format!("'{other}' is not a valid UsageSource"))),
+            other => Err(Error::Value(format!(
+                "'{other}' is not a valid UsageSource"
+            ))),
         }
     }
 }
@@ -437,7 +476,9 @@ impl ModelProfile {
         }
         if let Some(effective) = &self.effective {
             if effective.effective_context <= 0 {
-                return Err(Error::Value("effective_context must be positive".to_string()));
+                return Err(Error::Value(
+                    "effective_context must be positive".to_string(),
+                ));
             }
         }
         Ok(())

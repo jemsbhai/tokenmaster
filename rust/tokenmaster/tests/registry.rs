@@ -7,7 +7,7 @@
 //! a packaged-crate context, where the test skips with a note).
 
 use serde_json::{json, Value};
-use tokenmaster::{default_registry, Error, Meter, ModelProfile, Registry};
+use tokenmaster::{default_registry, get_profile, Error, Meter, ModelProfile, Registry};
 
 fn approx(actual: f64, expected: f64) {
     assert!((actual - expected).abs() <= 1e-9, "{actual} != {expected}");
@@ -22,15 +22,12 @@ fn bundled_copy_matches_the_canonical_python_snapshot() {
     let canonical_text = match std::fs::read_to_string(canonical_path) {
         Ok(text) => text,
         Err(_) => {
-            eprintln!(
-                "canonical models.json absent; sync test skipped (packaged-crate context)"
-            );
+            eprintln!("canonical models.json absent; sync test skipped (packaged-crate context)");
             return;
         }
     };
     let canonical: Value = serde_json::from_str(&canonical_text).unwrap();
-    let bundled: Value =
-        serde_json::from_str(include_str!("../data/models.json")).unwrap();
+    let bundled: Value = serde_json::from_str(include_str!("../data/models.json")).unwrap();
     assert_eq!(
         bundled, canonical,
         "rust/tokenmaster/data/models.json diverges from the canonical Python snapshot; re-copy it"
@@ -56,7 +53,9 @@ fn bundled_snapshot_integrity() {
 
 #[test]
 fn lookup_canonical_id() {
-    let p = default_registry().get("anthropic:claude-sonnet-4-6").unwrap();
+    let p = default_registry()
+        .get("anthropic:claude-sonnet-4-6")
+        .unwrap();
     assert_eq!(p.window_nominal, 1_000_000);
     approx(p.pricing.as_ref().unwrap().input, 3.0);
 }
@@ -86,6 +85,78 @@ fn lookup_dated_snapshot_suffix() {
 fn lookup_alias() {
     let p = default_registry().get("gemini-3.1-pro-preview").unwrap();
     assert_eq!(p.model_id, "google:gemini-3.1-pro");
+    assert_eq!(p.window_nominal, 1_048_576);
+    assert_eq!(p.max_output, Some(65_536));
+    assert!(p.source.contains("/models/gemini-3.1-pro-preview"));
+    for alias in [
+        "gemini-3.1-pro-preview-customtools",
+        "google:gemini-3.1-pro-preview-customtools",
+    ] {
+        assert_eq!(
+            default_registry().get(alias).unwrap().model_id,
+            "google:gemini-3.1-pro"
+        );
+    }
+
+    let flash = default_registry().get("gemini-3.5-flash").unwrap();
+    assert_eq!(flash.window_nominal, 1_048_576);
+    assert_eq!(flash.max_output, Some(65_536));
+    assert!(flash.source.contains("/models/gemini-3.5-flash"));
+}
+
+#[test]
+fn gpt_5_6_family_profiles_and_aliases() {
+    let sol = get_profile("openai:gpt-5.6-sol").unwrap();
+    for model_id in ["gpt-5.6-sol", "openai:gpt-5.6", "gpt-5.6"] {
+        assert_eq!(
+            get_profile(model_id).unwrap().model_id,
+            "openai:gpt-5.6-sol"
+        );
+    }
+    assert_eq!(sol.window_nominal, 1_050_000);
+    assert_eq!(sol.max_output, Some(128_000));
+    let sol_pricing = sol.pricing.as_ref().unwrap();
+    approx(sol_pricing.input, 5.0);
+    approx(sol_pricing.cache_read, 0.5);
+    approx(sol_pricing.cache_write, 6.25);
+    approx(sol_pricing.output, 30.0);
+    assert_eq!(sol_pricing.as_of.as_deref(), Some("2026-07-31"));
+    assert!(sol.source.contains("/gpt-5.6-sol"));
+
+    let terra = get_profile("gpt-5.6-terra").unwrap();
+    assert_eq!(terra.model_id, "openai:gpt-5.6-terra");
+    assert_eq!(terra.window_nominal, 1_050_000);
+    assert_eq!(terra.max_output, Some(128_000));
+    let terra_pricing = terra.pricing.as_ref().unwrap();
+    approx(terra_pricing.input, 2.0);
+    approx(terra_pricing.cache_read, 0.2);
+    approx(terra_pricing.cache_write, 2.5);
+    approx(terra_pricing.output, 12.0);
+    assert_eq!(terra_pricing.as_of.as_deref(), Some("2026-07-31"));
+    assert!(terra.source.contains("/gpt-5.6-terra"));
+
+    let luna = get_profile("gpt-5.6-luna").unwrap();
+    assert_eq!(luna.model_id, "openai:gpt-5.6-luna");
+    assert_eq!(luna.window_nominal, 1_050_000);
+    assert_eq!(luna.max_output, Some(128_000));
+    let luna_pricing = luna.pricing.as_ref().unwrap();
+    approx(luna_pricing.input, 0.2);
+    approx(luna_pricing.cache_read, 0.02);
+    approx(luna_pricing.cache_write, 0.25);
+    approx(luna_pricing.output, 1.2);
+    assert_eq!(luna_pricing.as_of.as_deref(), Some("2026-07-31"));
+    assert!(luna.source.contains("/gpt-5.6-luna"));
+}
+
+#[test]
+fn gpt_5_4_mini_profile_uses_verified_output_cap() {
+    let profile = get_profile("openai:gpt-5.4-mini").unwrap();
+    assert_eq!(profile.max_output, Some(128_000));
+    assert_eq!(
+        profile.pricing.as_ref().unwrap().as_of.as_deref(),
+        Some("2026-07-31")
+    );
+    assert!(profile.source.contains("/gpt-5.4-mini"));
 }
 
 #[test]
@@ -107,8 +178,7 @@ fn unknown_model_fails_with_suggestions() {
 #[test]
 fn register_override_wins() {
     let mut reg = Registry::bundled();
-    let mut custom =
-        ModelProfile::new("anthropic:claude-haiku-4-5", "anthropic", 123_456).unwrap();
+    let mut custom = ModelProfile::new("anthropic:claude-haiku-4-5", "anthropic", 123_456).unwrap();
     custom.source = "user override".to_string();
     reg.register(custom, &[]);
     assert_eq!(reg.get("claude-haiku-4-5").unwrap().window_nominal, 123_456);

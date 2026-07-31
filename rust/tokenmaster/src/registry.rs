@@ -25,6 +25,7 @@ use std::sync::OnceLock;
 
 use serde_json::Value;
 
+use crate::pricing::{PricingSchedule, PricingScope, PricingTier};
 use crate::types::{as_map, opt_string, Error, ModelProfile};
 
 const BUNDLED_MODELS: &str = include_str!("../data/models.json");
@@ -37,7 +38,8 @@ fn norm(s: &str) -> String {
 fn is_dated_suffix(s: &str) -> bool {
     s.len() >= 4
         && s.chars().any(|c| c.is_ascii_digit())
-        && s.chars().all(|c| c.is_ascii_digit() || c == '-' || c == '.')
+        && s.chars()
+            .all(|c| c.is_ascii_digit() || c == '-' || c == '.')
 }
 
 // ------------------------------------------------------------------------ //
@@ -57,9 +59,9 @@ fn match_total(a: &[char], b: &[char]) -> usize {
         let mut bestj = blo;
         let mut bestsize = 0usize;
         let mut j2len: HashMap<usize, usize> = HashMap::new();
-        for i in alo..ahi {
+        for (i, item) in a.iter().enumerate().take(ahi).skip(alo) {
             let mut new_j2len: HashMap<usize, usize> = HashMap::new();
-            if let Some(indices) = b2j.get(&a[i]) {
+            if let Some(indices) = b2j.get(item) {
                 for &j in indices {
                     if j < blo {
                         continue;
@@ -128,7 +130,11 @@ fn get_close_matches(word: &str, possibilities: &[&str], n: usize, cutoff: f64) 
             .unwrap_or(std::cmp::Ordering::Equal)
             .then_with(|| q.1.cmp(p.1))
     });
-    scored.into_iter().take(n).map(|(_, v)| v.to_string()).collect()
+    scored
+        .into_iter()
+        .take(n)
+        .map(|(_, v)| v.to_string())
+        .collect()
 }
 
 // ------------------------------------------------------------------------ //
@@ -140,6 +146,7 @@ pub struct Registry {
     snapshot_date: Option<String>,
     profiles: BTreeMap<String, ModelProfile>,
     alias: BTreeMap<String, String>,
+    pricing_schedules: BTreeMap<String, PricingSchedule>,
 }
 
 impl Registry {
@@ -148,13 +155,14 @@ impl Registry {
             snapshot_date,
             profiles: BTreeMap::new(),
             alias: BTreeMap::new(),
+            pricing_schedules: BTreeMap::new(),
         }
     }
 
     /// A fresh registry from the embedded snapshot.
     pub fn bundled() -> Registry {
-        let v: Value = serde_json::from_str(BUNDLED_MODELS)
-            .expect("bundled models.json parses as JSON");
+        let v: Value =
+            serde_json::from_str(BUNDLED_MODELS).expect("bundled models.json parses as JSON");
         Registry::from_value(&v).expect("bundled models.json is a valid registry snapshot")
     }
 
@@ -191,9 +199,38 @@ impl Registry {
                             ))
                         }
                     }
+                    let raw_tiers = copy.remove("pricing_tiers");
+                    let raw_scope = copy.remove("pricing_scope");
                     let profile = ModelProfile::from_value(&Value::Object(copy))?;
                     let alias_refs: Vec<&str> = aliases.iter().map(String::as_str).collect();
-                    reg.register(profile, &alias_refs);
+                    let has_tiers = !matches!(raw_tiers.as_ref(), None | Some(Value::Null));
+                    let has_scope = !matches!(raw_scope.as_ref(), None | Some(Value::Null));
+                    if !has_tiers && !has_scope {
+                        reg.register(profile, &alias_refs);
+                        continue;
+                    }
+                    let base = profile.pricing.clone().ok_or_else(|| {
+                        Error::Value("pricing tiers require base profile pricing".to_string())
+                    })?;
+                    let tiers = match raw_tiers {
+                        None | Some(Value::Null) => Vec::new(),
+                        Some(Value::Array(values)) => values
+                            .iter()
+                            .map(PricingTier::from_value)
+                            .collect::<Result<Vec<_>, _>>()?,
+                        Some(_) => {
+                            return Err(Error::Value("pricing_tiers must be an array".to_string()))
+                        }
+                    };
+                    let scope = match raw_scope {
+                        None | Some(Value::Null) => PricingScope::default(),
+                        Some(value @ Value::Object(_)) => PricingScope::from_value(&value)?,
+                        Some(_) => {
+                            return Err(Error::Value("pricing_scope must be an object".to_string()))
+                        }
+                    };
+                    let schedule = PricingSchedule::new(base, tiers, scope)?;
+                    reg.register_with_schedule(profile, schedule, &alias_refs)?;
                 }
             }
         }
@@ -205,6 +242,7 @@ impl Registry {
         let canonical = norm(&profile.model_id);
         let provider = profile.provider.clone();
         self.profiles.insert(canonical.clone(), profile);
+        self.pricing_schedules.remove(&canonical);
         self.alias.insert(canonical.clone(), canonical.clone());
         if let Some(idx) = canonical.find(':') {
             let bare = canonical[idx + 1..].to_string();
@@ -219,6 +257,29 @@ impl Registry {
                     .or_insert_with(|| canonical.clone());
             }
         }
+    }
+
+    /// Register a profile together with an input-tier pricing schedule.
+    pub fn register_with_schedule(
+        &mut self,
+        profile: ModelProfile,
+        schedule: PricingSchedule,
+        aliases: &[&str],
+    ) -> Result<(), Error> {
+        schedule.validate()?;
+        let profile_pricing = profile
+            .pricing
+            .as_ref()
+            .ok_or_else(|| Error::Value("a scheduled profile requires base pricing".to_string()))?;
+        if &schedule.base != profile_pricing {
+            return Err(Error::Value(
+                "pricing schedule base must equal profile.pricing".to_string(),
+            ));
+        }
+        let canonical = norm(&profile.model_id);
+        self.register(profile, aliases);
+        self.pricing_schedules.insert(canonical, schedule);
+        Ok(())
     }
 
     /// Resolve a model id: exact alias, then dated-suffix, else UnknownModel
@@ -254,6 +315,23 @@ impl Registry {
         })
     }
 
+    /// Return tier-aware pricing, or synthesize a flat schedule for a
+    /// priced profile.  The returned schedule is owned so the flat fallback
+    /// does not require mutating the registry.
+    pub fn get_pricing_schedule(&self, model_id: &str) -> Result<Option<PricingSchedule>, Error> {
+        let profile = self.get(model_id)?;
+        let canonical = norm(&profile.model_id);
+        if let Some(schedule) = self.pricing_schedules.get(&canonical) {
+            return Ok(Some(schedule.clone()));
+        }
+        Ok(profile.pricing.clone().map(PricingSchedule::flat))
+    }
+
+    /// Rust-style alias for [`Registry::get_pricing_schedule`].
+    pub fn pricing_schedule(&self, model_id: &str) -> Result<Option<PricingSchedule>, Error> {
+        self.get_pricing_schedule(model_id)
+    }
+
     /// Whether the id resolves (Python: `model_id in registry`).
     pub fn contains(&self, model_id: &str) -> bool {
         self.get(model_id).is_ok()
@@ -286,7 +364,12 @@ pub fn default_registry() -> &'static Registry {
 
 /// Resolve against the default registry, returning an owned profile.
 pub fn get_profile(model_id: &str) -> Result<ModelProfile, Error> {
-    default_registry().get(model_id).map(|p| p.clone())
+    default_registry().get(model_id).cloned()
+}
+
+/// Resolve a model's bundled tier-aware or flat pricing schedule.
+pub fn get_pricing_schedule(model_id: &str) -> Result<Option<PricingSchedule>, Error> {
+    default_registry().get_pricing_schedule(model_id)
 }
 
 // ------------------------------------------------------------------------ //

@@ -16,11 +16,12 @@
 //!   info_handoff     = 0.20*100,000*2e-6 = 0.04
 //!   net_handoff(k)   = 0.1015 + friction - 0.019k
 
-use serde_json::json;
+use serde_json::{json, Value};
 use tokenmaster::{
     Action, CostModelConfig, CostModelPolicy, EffectEstimate, Error, Event, EventKind, Meter,
-    MeterConfig, MeterState, ModelProfile, Policy, PredictivePolicy, Pricing, RationaleTrace,
-    Recommendation, TaskContext, TaskCriticality, ThresholdPolicy, Urgency, SCHEMA_VERSION,
+    MeterConfig, MeterState, ModelProfile, Policy, PredictivePolicy, Pricing, PricingSchedule,
+    PricingScope, PricingTier, RationaleTrace, Recommendation, TaskContext, TaskCriticality,
+    ThresholdPolicy, Urgency, SCHEMA_VERSION,
 };
 
 /// pytest.approx defaults: rel 1e-6, abs 1e-12.
@@ -214,7 +215,10 @@ fn predictive_continue_when_coverage_ample() {
     assert_eq!(rec.urgency, Urgency::None);
     assert!(rec.rationale.comparison.contains("covers horizon 10"));
     assert_eq!(rec.rationale.derived["required_turns"], json!(13));
-    assert_eq!(rec.rationale.derived["projected_used_at_horizon"], json!(2_300));
+    assert_eq!(
+        rec.rationale.derived["projected_used_at_horizon"],
+        json!(2_300)
+    );
 }
 
 #[test]
@@ -294,7 +298,8 @@ fn cost_model_k_star_matches_contract_formula() {
         expected_remaining_turns: Some(3),
         ..TaskContext::default()
     };
-    let rec = cost_meter(1_000_000).advise(Some(&task), Some(&CostModelPolicy::new(Some(pricing()))));
+    let rec =
+        cost_meter(1_000_000).advise(Some(&task), Some(&CostModelPolicy::new(Some(pricing()))));
     approx(
         rec.rationale.derived["k_star"].as_f64().unwrap(),
         0.1345 / 0.017,
@@ -311,7 +316,8 @@ fn cost_model_continue_below_break_even() {
         expected_remaining_turns: Some(3),
         ..TaskContext::default()
     };
-    let rec = cost_meter(1_000_000).advise(Some(&task), Some(&CostModelPolicy::new(Some(pricing()))));
+    let rec =
+        cost_meter(1_000_000).advise(Some(&task), Some(&CostModelPolicy::new(Some(pricing()))));
     assert_eq!(rec.action, Action::Continue);
     assert_eq!(rec.urgency, Urgency::None);
     assert_eq!(rec.expected.cost_delta, Some(0.0));
@@ -327,7 +333,8 @@ fn cost_model_handoff_wins_long_horizon_zero_friction() {
         expected_remaining_turns: Some(20),
         ..TaskContext::default()
     };
-    let rec = cost_meter(1_000_000).advise(Some(&task), Some(&CostModelPolicy::new(Some(pricing()))));
+    let rec =
+        cost_meter(1_000_000).advise(Some(&task), Some(&CostModelPolicy::new(Some(pricing()))));
     assert_eq!(rec.action, Action::Handoff);
     assert_eq!(rec.urgency, Urgency::Soon);
     approx(rec.expected.cost_delta.unwrap(), 0.1015 - 20.0 * 0.019);
@@ -358,6 +365,73 @@ fn cost_model_friction_flips_choice_to_compact() {
 }
 
 #[test]
+fn cost_model_resolves_pre_post_and_handoff_tiers_independently() {
+    let long = Pricing {
+        input: 4.0,
+        output: 15.0,
+        cache_read: 0.4,
+        cache_write: 5.0,
+        currency: "USD".to_string(),
+        as_of: Some("2026-07-31".to_string()),
+    };
+    let schedule = PricingSchedule::new(
+        pricing(),
+        vec![PricingTier::new(272_001, long).unwrap()],
+        PricingScope::default(),
+    )
+    .unwrap();
+    let policy = CostModelPolicy::with_schedule(schedule);
+    let task = TaskContext {
+        expected_remaining_turns: Some(3),
+        ..TaskContext::default()
+    };
+    let rec = steady_meter(&[297_000, 298_000, 299_000, 300_000], 1_000_000)
+        .advise(Some(&task), Some(&policy));
+
+    assert_eq!(
+        rec.rationale.derived["pre_tier_min_input_tokens"],
+        json!(272_001)
+    );
+    assert_eq!(
+        rec.rationale.derived["post_tier_min_input_tokens"],
+        Value::Null
+    );
+    assert_eq!(
+        rec.rationale.derived["handoff_tier_min_input_tokens"],
+        Value::Null
+    );
+    // Pre is long-tier; compacted and handoff prefixes are short-tier.
+    approx(
+        rec.rationale.derived["saving_per_turn_compact"]
+            .as_f64()
+            .unwrap(),
+        300_000.0 * 0.4e-6 - 45_000.0 * 0.2e-6,
+    );
+    approx(
+        rec.rationale.derived["one_time_compact"].as_f64().unwrap(),
+        30_000.0 * 15e-6 + 45_000.0 * (2.5e-6 - 0.2e-6),
+    );
+}
+
+#[test]
+fn cost_model_rejects_schedules_with_unpriced_usage_categories() {
+    let scope = PricingScope {
+        unpriced_usage_categories: vec!["cache_write_tokens".to_string()],
+        ..PricingScope::default()
+    };
+    let schedule = PricingSchedule::new(pricing(), Vec::new(), scope).unwrap();
+    let error = CostModelPolicy::with_schedule_config(schedule, CostModelConfig::default())
+        .err()
+        .expect("incomplete pricing must be rejected");
+    assert!(error.to_string().contains("requires complete pricing"));
+
+    let error = CostModelPolicy::for_model("gemini-3.1-pro-preview")
+        .err()
+        .expect("bundled Gemini cache storage is unpriced");
+    assert!(error.to_string().contains("cache_write_tokens"));
+}
+
+#[test]
 fn cost_model_overflow_within_horizon_forces_action_now() {
     // window 105,000 -> headroom 5,000, eta expected 5 < k=20
     let task = TaskContext {
@@ -367,7 +441,10 @@ fn cost_model_overflow_within_horizon_forces_action_now() {
     let rec = cost_meter(105_000).advise(Some(&task), Some(&CostModelPolicy::new(Some(pricing()))));
     assert_ne!(rec.action, Action::Continue);
     assert_eq!(rec.urgency, Urgency::Now);
-    assert_eq!(rec.rationale.derived["overflow_within_horizon"], json!(true));
+    assert_eq!(
+        rec.rationale.derived["overflow_within_horizon"],
+        json!(true)
+    );
     assert!(rec.rationale.comparison.contains("infeasible"));
 }
 

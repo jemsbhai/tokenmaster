@@ -13,6 +13,9 @@ beyond the core: no terminal framework, no color crate.
 
     cargo add ctxmaster tokenmaster
 
+Version 0.1.1 accepts Tokenmaster 0.1 and 0.2; the Meter/Event wire schema
+used by the gauge remains 0.1.
+
 ## Quickstart
 
 ```rust

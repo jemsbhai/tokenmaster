@@ -72,8 +72,7 @@ fn assert_matches(actual: &Value, expected: &Value, path: &str) {
                     .unwrap_or_else(|| panic!("{path}: expected number")),
                 _ => panic!("{path}: expected number"),
             };
-            let close =
-                (a - e).abs() <= (FLOAT_TOL * a.abs().max(e.abs())).max(FLOAT_TOL);
+            let close = (a - e).abs() <= (FLOAT_TOL * a.abs().max(e.abs())).max(FLOAT_TOL);
             assert!(close, "{path}: {a} != {e}");
         }
         _ => assert_eq!(actual, expected, "{path}: mismatch"),
@@ -118,8 +117,7 @@ fn run_vector(path: &Path) {
         .expect("vector filename")
         .to_string_lossy()
         .to_string();
-    let text = std::fs::read_to_string(path)
-        .unwrap_or_else(|e| panic!("{stem}: read failed: {e}"));
+    let text = std::fs::read_to_string(path).unwrap_or_else(|e| panic!("{stem}: read failed: {e}"));
     let vector: Value =
         serde_json::from_str(&text).unwrap_or_else(|e| panic!("{stem}: parse failed: {e}"));
 
@@ -155,8 +153,8 @@ fn run_vector(path: &Path) {
         .unwrap_or_else(|| panic!("{stem}: turns is not an array"));
     let mut states: Vec<Value> = Vec::new();
     for turn_value in turns {
-        let turn = TurnUsage::from_value(turn_value)
-            .unwrap_or_else(|e| panic!("{stem}: turn: {e}"));
+        let turn =
+            TurnUsage::from_value(turn_value).unwrap_or_else(|e| panic!("{stem}: turn: {e}"));
         let recorded = meter
             .record(turn)
             .unwrap_or_else(|e| panic!("{stem}: record: {e}"));
@@ -168,9 +166,7 @@ fn run_vector(path: &Path) {
                 .iter()
                 .rev()
                 .find_map(|e| match &e.kind {
-                    EventKind::TurnRecorded { turn, state } => {
-                        Some((turn.clone(), state.clone()))
-                    }
+                    EventKind::TurnRecorded { turn, state } => Some((turn.clone(), state.clone())),
                     _ => None,
                 })
                 .unwrap_or_else(|| panic!("{stem}: no turn_recorded event"));
@@ -211,7 +207,7 @@ fn vector_conformance() {
     let mut paths: Vec<PathBuf> = std::fs::read_dir(dir)
         .expect("spec/vectors is readable")
         .map(|entry| entry.expect("directory entry").path())
-        .filter(|p| p.extension().map_or(false, |ext| ext == "json"))
+        .filter(|p| p.extension() == Some(std::ffi::OsStr::new("json")))
         .collect();
     paths.sort();
     assert!(

@@ -1,6 +1,6 @@
 {
   "name": "ctxmaster",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Terminal context gauge and visualization layer for tokenmaster: zone-colored budget bar, token velocity, and turns-to-exhaustion for LLM context windows.",
   "type": "commonjs",
   "main": "./dist/cjs/index.js",
@@ -27,8 +27,9 @@
   "scripts": {
     "clean": "node scripts/clean.mjs",
     "build": "npm run clean && tsc -p tsconfig.cjs.json && tsc -p tsconfig.esm.json && node scripts/write-esm-stub.mjs",
-    "pretest": "npm run build",
-    "test": "node --test test/",
+    "build:local-core": "npm --prefix ../tokenmaster run build",
+    "pretest": "npm run build:local-core && npm run build",
+    "test": "node --test test/ && node scripts/test-packed-local.mjs",
     "prepublishOnly": "npm test"
   },
   "keywords": [
@@ -49,7 +50,7 @@
     "node": ">=18"
   },
   "dependencies": {
-    "tokenmaster": ">=0.1.0 <0.2.0"
+    "tokenmaster": ">=0.1.0 <0.3.0"
   },
   "devDependencies": {
     "typescript": "^5.5.0"

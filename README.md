@@ -19,12 +19,20 @@ schema, so anyone can build a visualizer against it; ctxmaster is the first.
 
 ## Status
 
-Python, JavaScript, and Rust packages are at 0.1.0 (alpha): the core
-contract (docs/core-api.md) is implemented in all three languages, and the
-JavaScript and Rust ports reproduce all nine conformance vectors under
-spec/ that freeze the arithmetic across languages. The JavaScript packages
-carry zero runtime dependencies (the wrapper depends only on the core); the
-Rust crates depend on serde and serde_json only.
+The tokenmaster core packages are at 0.2.0 for Python, JavaScript, and Rust.
+The companion ctxmaster packages are at 0.1.2 for Python and 0.1.1 for
+JavaScript and Rust. All are alpha: the core contract
+(docs/core-api.md) is implemented in all three languages, and the JavaScript
+and Rust ports reproduce all nine conformance vectors under spec/ that
+freeze the arithmetic across languages. The JavaScript packages carry zero
+runtime dependencies (the wrapper depends only on the core); the Rust
+crates depend on serde and serde_json only.
+
+The bundled registry contains 15 offline profiles, including GPT-5.6 Sol,
+Terra, and Luna with tier-aware Standard pricing. Maintainers can explicitly
+check official OpenAI documentation with `tokenmaster-models`; a weekly
+workflow reports drift for review. Library imports and ordinary meter use
+never access the network or mutate registry data.
 
 ## Repository layout
 

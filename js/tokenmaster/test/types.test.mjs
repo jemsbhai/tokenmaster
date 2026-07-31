@@ -10,6 +10,12 @@ import {
   UsageSource,
   asZone,
   Pricing,
+  PricingScope,
+  PricingTier,
+  PricingSchedule,
+  CostEstimate,
+  CostQuote,
+  LimitCheck,
   CalibrationRecord,
   ModelProfile,
   Breakdown,
@@ -179,6 +185,228 @@ test("pricing defaults and round trip", () => {
   assert.equal(pricing.currency, "USD");
   assert.equal(pricing.as_of, null);
   assert.deepEqual(Pricing.fromDict(pricing.toDict()), pricing);
+});
+
+test("tiered pricing types round trip and use inclusive thresholds", () => {
+  const base = new Pricing({ input: 5, output: 30, cache_read: 0.5, cache_write: 6.25 });
+  const long = new Pricing({ input: 10, output: 45, cache_read: 1, cache_write: 12.5 });
+  const schedule = new PricingSchedule({
+    base,
+    tiers: [new PricingTier({ min_input_tokens: 272_001, pricing: long })],
+    scope: new PricingScope({
+      service_tier: "standard",
+      region: "global",
+      basis: "request_input_tokens",
+    }),
+  });
+
+  assert.equal(schedule.resolve(272_000).pricing, base);
+  assert.equal(schedule.resolve(272_000).tier_min_input_tokens, null);
+  assert.equal(schedule.resolve(272_001).pricing, long);
+  assert.equal(schedule.resolve(272_001).tier_min_input_tokens, 272_001);
+  assert.deepEqual(PricingSchedule.fromDict(schedule.toDict()), schedule);
+  assert.equal(
+    Object.hasOwn(schedule.scope.toDict(), "unpriced_usage_categories"),
+    false
+  );
+  assert.ok(Object.isFrozen(schedule));
+  assert.ok(Object.isFrozen(schedule.tiers));
+});
+
+test("pricing scope preserves unpriced categories and omits an empty marker", () => {
+  const scope = new PricingScope({
+    unpriced_usage_categories: ["cache_write_tokens"],
+  });
+  assert.deepEqual(scope.toDict(), {
+    service_tier: "standard",
+    region: "global",
+    basis: "request_input_tokens",
+    unpriced_usage_categories: ["cache_write_tokens"],
+  });
+  assert.deepEqual(PricingScope.fromDict(scope.toDict()), scope);
+  assert.ok(Object.isFrozen(scope.unpriced_usage_categories));
+
+  assert.throws(
+    () =>
+      new PricingScope({
+        unpriced_usage_categories: ["cache_write_tokens", "cache_write_tokens"],
+      }),
+    /duplicate unpriced usage category/
+  );
+  assert.throws(
+    () => new PricingScope({ unpriced_usage_categories: ["token_hours"] }),
+    /unsupported unpriced usage category/
+  );
+  assert.throws(
+    () => PricingScope.fromDict({ unpriced_usage_categories: "cache_write_tokens" }),
+    /must be an array/
+  );
+});
+
+test("pricing schedules reject duplicate thresholds and mixed currencies", () => {
+  const usd = new Pricing({ input: 1, output: 2 });
+  const eur = new Pricing({ input: 1, output: 2, currency: "EUR" });
+  assert.throws(
+    () => new PricingSchedule({
+      base: usd,
+      tiers: [
+        new PricingTier({ min_input_tokens: 10, pricing: usd }),
+        new PricingTier({ min_input_tokens: 10, pricing: usd }),
+      ],
+    }),
+    /thresholds must be unique/
+  );
+  assert.throws(
+    () => new PricingSchedule({
+      base: usd,
+      tiers: [new PricingTier({ min_input_tokens: 10, pricing: eur })],
+    }),
+    /currencies must match/
+  );
+  assert.throws(
+    () => new PricingSchedule({
+      base: usd,
+      scope: new PricingScope({ basis: "total_tokens" }),
+    }),
+    /unsupported pricing scope basis/
+  );
+  assert.throws(
+    () => PricingSchedule.fromDict({ base: usd.toDict(), tiers: null }),
+    /tiers must be an array/
+  );
+  assert.throws(
+    () => PricingSchedule.fromDict({ base: usd.toDict(), scope: null }),
+    /scope must be an object/
+  );
+});
+
+test("cost quote and limit check preserve their wire shapes", () => {
+  const pricing = new Pricing({ input: 5, output: 30 });
+  const quote = new CostQuote({
+    model_id: "openai:gpt-test",
+    tier_basis_tokens: 100,
+    tier_min_input_tokens: null,
+    pricing,
+    input_cost: 0.0005,
+    cache_read_cost: 0,
+    cache_write_cost: 0,
+    output_cost: 0.0003,
+    reasoning_cost: 0.0006,
+    total_cost: 0.0014,
+    currency: "USD",
+    as_of: null,
+    source: "test",
+  });
+  const quoteDict = quote.toDict();
+  assert.deepEqual(Object.keys(quoteDict).sort(), [
+    "as_of",
+    "cache_read_cost",
+    "cache_write_cost",
+    "currency",
+    "input_cost",
+    "model_id",
+    "output_cost",
+    "pricing",
+    "reasoning_cost",
+    "source",
+    "tier_basis_tokens",
+    "tier_min_input_tokens",
+    "total_cost",
+  ]);
+  assert.deepEqual(CostQuote.fromDict(quoteDict), quote);
+
+  const check = new LimitCheck({
+    model_id: "openai:gpt-test",
+    capacity_kind: "nominal",
+    capacity: 1_000,
+    input_tokens: 900,
+    requested_output_tokens: 200,
+    reserved_output_tokens: 0,
+    context_output_tokens: 200,
+    context_tokens: 1_100,
+    max_input_tokens: 800,
+    max_output_tokens: 200,
+    input_exceeded: true,
+    context_exceeded: true,
+    output_exceeded: false,
+    allowed: false,
+    violations: ["input_tokens", "context_tokens"],
+  });
+  const checkDict = check.toDict();
+  assert.deepEqual(Object.keys(checkDict).sort(), [
+    "allowed",
+    "capacity",
+    "capacity_kind",
+    "context_exceeded",
+    "context_output_tokens",
+    "context_tokens",
+    "input_exceeded",
+    "input_tokens",
+    "max_input_tokens",
+    "max_output_tokens",
+    "model_id",
+    "output_exceeded",
+    "requested_output_tokens",
+    "reserved_output_tokens",
+    "violations",
+  ]);
+  assert.deepEqual(LimitCheck.fromDict(checkDict), check);
+  assert.ok(Object.isFrozen(check.violations));
+});
+
+test("cost estimate preserves its exact wire shape and assumptions", () => {
+  const pricing = new Pricing({
+    input: 5,
+    output: 30,
+    cache_read: 0.5,
+    cache_write: 6.25,
+    as_of: "2026-07-31",
+  });
+  const estimate = new CostEstimate({
+    model_id: "openai:gpt-test",
+    tier_basis_tokens: 272_000,
+    tier_min_input_tokens: null,
+    pricing,
+    input_tokens: 272_000,
+    reserved_output_tokens: 1_000,
+    input_rate_kind: "cache_write",
+    input_rate: 6.25,
+    output_rate: 30,
+    input_cost: 1.7,
+    output_cost: 0.03,
+    total_cost: 1.73,
+    currency: "USD",
+    as_of: "2026-07-31",
+    source: "test",
+    conservative: true,
+    assumptions: [
+      "estimated input uses the highest selected-tier input-category rate",
+      "reserved output uses the selected-tier output rate",
+    ],
+  });
+  const dict = estimate.toDict();
+  assert.deepEqual(Object.keys(dict).sort(), [
+    "as_of",
+    "assumptions",
+    "conservative",
+    "currency",
+    "input_cost",
+    "input_rate",
+    "input_rate_kind",
+    "input_tokens",
+    "model_id",
+    "output_cost",
+    "output_rate",
+    "pricing",
+    "reserved_output_tokens",
+    "source",
+    "tier_basis_tokens",
+    "tier_min_input_tokens",
+    "total_cost",
+  ]);
+  assert.deepEqual(CostEstimate.fromDict(dict), estimate);
+  assert.ok(Object.isFrozen(estimate));
+  assert.ok(Object.isFrozen(estimate.assumptions));
 });
 
 test("breakdown defaults to zeros and round trips", () => {

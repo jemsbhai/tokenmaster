@@ -77,16 +77,22 @@ window_nominal is load-bearing; pricing is optional and feeds the
 cost-model policy. Without a CalibrationRecord the gauges run against the
 nominal window and the provenance says so: "nominal (uncalibrated)".
 
-## What is in 0.1.0
+## What is in 0.2.0
 
 - Normalized TurnUsage accounting, with the hidden consumers (reasoning
   tokens, cache reads and writes, system prompt and tool-schema overhead) as
   first-class categories and a provenance tag on every number.
 - MeterState gauges: effective versus nominal budget, EWMA token velocity,
   turns-to-exhaustion with a conservative bound, zone classification.
-- A bundled model registry (12 models with dated, cited pricing), alias and
+- A bundled model registry (15 models with dated, cited pricing), alias and
   dated-suffix resolution, user overrides, and `Meter.for_model` for
-  zero-configuration attachment.
+  zero-configuration attachment. GPT-5.6 Sol, Terra, and Luna include
+  Standard short- and long-context tiers.
+- Tier-aware usage quotes, conservative request-cost estimates, and limit
+  checks, with cache reads, cache writes, visible output, and reasoning kept
+  exclusive and auditable. Provider charges that require missing dimensions,
+  such as Gemini cache-storage token-hours, are marked unpriced and fail
+  closed instead of being quoted as free.
 - A typed event stream (six event types with exact wire round-trips): the
   contract that visualizers such as ctxmaster, or your own, build on.
 - Three advisor policies: a threshold baseline that reproduces current
@@ -102,17 +108,19 @@ nominal window and the provenance says so: "nominal (uncalibrated)".
 
 ## Not yet included (planned)
 
-Provider adapters (Anthropic and OpenAI usage normalizers), tokenizer
+Provider usage adapters (Anthropic and OpenAI response normalizers), tokenizer
 estimators, LLM-backed probe generators and judges, calibrated
 effective-capacity data (defaults equal the nominal window, and the
-provenance says so), async event delivery, and tiered long-context pricing
-in the registry. The JavaScript port (npm) and the Rust port (crates.io)
-are both live at 0.1.0, tokenmaster and ctxmaster alike, and conformant
-against the vectors.
+provenance says so), and async event delivery. The JavaScript and Rust ports
+mirror the 0.2 pricing and limit APIs and remain conformant against the shared
+vectors.
 
 ## Design
 
-The core has zero hard dependencies and never touches the network. Every
+The core has zero hard dependencies and never touches the network during
+ordinary imports or use. The separately invoked `tokenmaster-models`
+maintainer command can check/propose/apply official OpenAI registry updates;
+it is fail-closed and review-oriented. Every
 quantity carries its provenance; every recommendation ships the arithmetic
 that produced it; parameters that have not been measured yet are labeled
 provisional. The full contract lives at `docs/core-api.md` in the
