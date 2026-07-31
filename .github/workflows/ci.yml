@@ -79,8 +79,29 @@ jobs:
         run: |
           npm --prefix js/tokenmaster test
           npm --prefix js/ctxmaster test
-          npm --prefix js/tokenmaster pack --dry-run
-          npm --prefix js/ctxmaster pack --dry-run
+          npm pack ./js/tokenmaster --dry-run
+          npm pack ./js/ctxmaster --dry-run
+
+  javascript-windows:
+    name: Node.js 18 (Windows)
+    runs-on: windows-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 18
+
+      - name: Install dependencies
+        run: |
+          npm --prefix js/tokenmaster ci
+          npm --prefix js/ctxmaster ci
+
+      - name: Test packages
+        run: |
+          npm --prefix js/tokenmaster test
+          npm --prefix js/ctxmaster test
 
   rust-msrv:
     name: Rust 1.71 MSRV
