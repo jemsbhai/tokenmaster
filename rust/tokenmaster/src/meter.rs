@@ -157,7 +157,9 @@ impl Meter {
             ));
         }
         if config.reserved_output < 0 {
-            return Err(Error::Value("reserved_output must be non-negative".to_string()));
+            return Err(Error::Value(
+                "reserved_output must be non-negative".to_string(),
+            ));
         }
         if config.velocity_shift_factor <= 1.0 {
             return Err(Error::Value(
@@ -346,9 +348,8 @@ impl Meter {
         let chosen: &dyn Policy = match policy {
             Some(p) => p,
             None => {
-                default_policy =
-                    ThresholdPolicy::new(self.config.caution, self.config.critical)
-                        .expect("meter thresholds satisfy the policy constraint");
+                default_policy = ThresholdPolicy::new(self.config.caution, self.config.critical)
+                    .expect("meter thresholds satisfy the policy constraint");
                 &default_policy
             }
         };
@@ -388,7 +389,10 @@ impl Meter {
         let fill_effective = used as f64 / effective as f64;
 
         let mut provenance = BTreeMap::new();
-        provenance.insert("window_effective".to_string(), self.profile.effective_source());
+        provenance.insert(
+            "window_effective".to_string(),
+            self.profile.effective_source(),
+        );
         if let Some(last) = self.turns.last() {
             provenance.insert("used_tokens".to_string(), last.source.as_str().to_string());
         }

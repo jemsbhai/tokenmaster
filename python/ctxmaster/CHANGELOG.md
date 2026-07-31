@@ -2,6 +2,14 @@
 
 All notable changes to ctxmaster are documented in this file.
 
+## 0.1.2 (2026-07-31)
+
+- Widened the compatible Tokenmaster range to `>=0.1.0,<0.3` so the
+  visualization package can be installed with Tokenmaster 0.2.0. The
+  dependency-range change itself is compatibility-only.
+- Added an ASCII bar fallback for Windows terminals whose active encoding
+  cannot represent the Unicode block glyphs.
+
 ## 0.1.1 (2026-07-13)
 
 - Documentation-only release; no code changes.

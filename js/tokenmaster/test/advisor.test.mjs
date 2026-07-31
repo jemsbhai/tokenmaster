@@ -26,6 +26,10 @@ import {
   ModelProfile,
   PredictivePolicy,
   Pricing,
+  PricingSchedule,
+  PricingScope,
+  PricingTier,
+  Registry,
   RationaleTrace,
   Recommendation,
   TaskContext,
@@ -349,4 +353,99 @@ test("cost model parameter validation", () => {
     RangeError
   );
   assert.throws(() => new CostModelPolicy({ default_horizon: 0 }), RangeError);
+});
+
+test("cost model rejects schedules with unpriced usage categories", () => {
+  const incomplete = new PricingSchedule({
+    base: PRICING,
+    scope: new PricingScope({
+      unpriced_usage_categories: ["cache_write_tokens"],
+    }),
+  });
+  assert.throws(
+    () => new CostModelPolicy({ pricing_schedule: incomplete }),
+    /requires a complete pricing schedule.*cache_write_tokens/
+  );
+});
+
+test("cost model resolves pre, post, and handoff prices independently", () => {
+  const tier = new Pricing({
+    input: 4.0,
+    output: 15.0,
+    cache_read: 0.4,
+    cache_write: 5.0,
+    as_of: "2026-07-31",
+  });
+  const schedule = new PricingSchedule({
+    base: PRICING,
+    tiers: [new PricingTier({ min_input_tokens: 50_000, pricing: tier })],
+  });
+  const rec = costMeter().advise(
+    new TaskContext({ expected_remaining_turns: 3 }),
+    new CostModelPolicy({ pricing_schedule: schedule })
+  );
+
+  assertClose(rec.rationale.derived.saving_per_turn_compact, 0.037);
+  assertClose(rec.rationale.derived.one_time_compact, 0.1845);
+  assertClose(rec.rationale.derived.one_time_handoff, 0.0865);
+  assertClose(rec.rationale.derived.net_compact, 0.2245 - 3 * 0.037);
+  assertClose(rec.rationale.derived.net_handoff, 0.1665 - 3 * 0.039);
+  assert.equal(rec.rationale.derived.pre_tier_min_input_tokens, 50_000);
+  assert.equal(rec.rationale.derived.post_tier_min_input_tokens, null);
+  assert.equal(rec.rationale.derived.handoff_tier_min_input_tokens, null);
+  assert.equal(rec.rationale.inputs.prices_per_mtok.tiers.length, 1);
+});
+
+test("cost model forProfile accepts an explicit schedule and keeps flat compatibility", () => {
+  const profileWithPricing = new ModelProfile({
+    model_id: "test:priced",
+    provider: "test",
+    window_nominal: 1_000_000,
+    pricing: PRICING,
+  });
+  const schedule = new PricingSchedule({ base: PRICING });
+  const scheduled = CostModelPolicy.forProfile(profileWithPricing, {
+    pricing_schedule: schedule,
+  });
+  assert.equal(scheduled.pricing, PRICING);
+  assert.equal(scheduled.pricing_schedule, schedule);
+
+  const flat = CostModelPolicy.forProfile(profileWithPricing);
+  assert.equal(flat.pricing, PRICING);
+  assert.equal(flat.pricing_schedule, null);
+});
+
+test("cost model forModel loads a custom registry schedule", () => {
+  const profileWithPricing = new ModelProfile({
+    model_id: "test:scheduled",
+    provider: "test",
+    window_nominal: 1_000_000,
+    pricing: PRICING,
+  });
+  const schedule = new PricingSchedule({
+    base: PRICING,
+    tiers: [
+      new PricingTier({
+        min_input_tokens: 50_000,
+        pricing: new Pricing({
+          input: 4,
+          output: 15,
+          cache_read: 0.4,
+          cache_write: 5,
+        }),
+      }),
+    ],
+  });
+  const registry = new Registry();
+  registry.registerWithSchedule(profileWithPricing, schedule, ["scheduled"]);
+  const policy = CostModelPolicy.forModel("scheduled", { registry });
+  assert.equal(policy.pricing, PRICING);
+  assert.equal(policy.pricing_schedule, schedule);
+  assert.throws(
+    () => new CostModelPolicy({
+      pricing: new Pricing({ input: 1, output: 2 }),
+      pricing_schedule: schedule,
+    }),
+    /pricing must equal pricing_schedule\.base/
+  );
 });

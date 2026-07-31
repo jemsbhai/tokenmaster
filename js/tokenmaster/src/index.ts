@@ -1,9 +1,9 @@
 /**
  * tokenmaster: context-budget instrumentation core for LLM applications.
  *
- * JavaScript port of the reference implementation, governed by
- * docs/core-api.md (contract 0.1) and the golden vectors under spec/vectors.
- * Modules land incrementally; this entry point re-exports the public surface.
+ * JavaScript port of the reference implementation. Version 0.2 preserves the
+ * stable 0.1 meter/event wire contract and adds tier-aware pricing and request
+ * limit APIs. This entry point re-exports the public surface.
  */
 
 export {
@@ -13,6 +13,12 @@ export {
   asZone,
   asUsageSource,
   Pricing,
+  PricingScope,
+  PricingTier,
+  PricingSchedule,
+  CostEstimate,
+  CostQuote,
+  LimitCheck,
   CalibrationRecord,
   ModelProfile,
   Breakdown,
@@ -24,6 +30,13 @@ export {
 
 export type {
   PricingDict,
+  PricingScopeDict,
+  PricingTierDict,
+  PricingScheduleDict,
+  CostEstimateDict,
+  CostQuoteDict,
+  CapacityKind,
+  LimitCheckDict,
   CalibrationRecordDict,
   ModelProfileDict,
   BreakdownDict,
@@ -80,6 +93,17 @@ export {
   UnknownModelError,
   defaultRegistry,
   getProfile,
+  getPricingSchedule,
+  quoteEstimate,
+  quoteUsage,
+  checkRequestLimits,
+} from "./registry.js";
+
+export type {
+  ModelOrProfile,
+  UsageLike,
+  CostEstimateOptions,
+  RequestLimitOptions,
 } from "./registry.js";
 
 export {

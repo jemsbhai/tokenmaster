@@ -1,0 +1,140 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  python:
+    name: Python ${{ matrix.python-version }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.14"]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install test and build dependencies
+        run: >-
+          python -m pip install
+          pytest==9.1.1
+          build==1.5.0
+          twine==6.2.0
+          ruff==0.15.0
+          mypy==1.19.1
+          -e python/tokenmaster
+          -e python/ctxmaster
+
+      - name: Lint and type-check
+        run: |
+          ruff check python
+          mypy python/tokenmaster/src python/ctxmaster/src
+
+      - name: Test
+        run: python -m pytest python/tokenmaster/tests python/ctxmaster/tests -q
+
+      - name: Build and inspect distributions
+        run: |
+          python -m build python/tokenmaster --outdir artifacts/python/tokenmaster
+          python -m build python/ctxmaster --outdir artifacts/python/ctxmaster
+          python -m twine check --strict artifacts/python/tokenmaster/* artifacts/python/ctxmaster/*
+
+  javascript:
+    name: Node.js ${{ matrix.node-version }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        node-version: [18, 24]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: ${{ matrix.node-version }}
+
+      - name: Install dependencies
+        run: |
+          npm --prefix js/tokenmaster ci
+          npm --prefix js/ctxmaster ci
+
+      - name: Test and inspect packages
+        run: |
+          npm --prefix js/tokenmaster test
+          npm --prefix js/ctxmaster test
+          npm pack ./js/tokenmaster --dry-run
+          npm pack ./js/ctxmaster --dry-run
+
+  javascript-windows:
+    name: Node.js 18 (Windows)
+    runs-on: windows-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: 18
+
+      - name: Install dependencies
+        run: |
+          npm --prefix js/tokenmaster ci
+          npm --prefix js/ctxmaster ci
+
+      - name: Test packages
+        run: |
+          npm --prefix js/tokenmaster test
+          npm --prefix js/ctxmaster test
+
+  rust-msrv:
+    name: Rust 1.71 MSRV
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+      - name: Install the minimum supported Rust toolchain
+        run: rustup toolchain install 1.71.0 --profile minimal
+
+      - name: Test and package with the MSRV
+        working-directory: rust
+        run: |
+          cargo +1.71.0 test --workspace --all-targets --locked
+          cargo +1.71.0 package -p tokenmaster --locked
+          cargo +1.71.0 package -p ctxmaster --locked
+
+  rust-stable:
+    name: Rust stable
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+      - name: Install the stable Rust toolchain
+        run: rustup toolchain install stable --profile minimal --component clippy,rustfmt
+
+      - name: Test, lint, and package
+        working-directory: rust
+        run: |
+          cargo +stable test --workspace --all-targets --locked
+          cargo +stable fmt --all --check
+          cargo +stable clippy --workspace --all-targets --locked -- -D warnings
+          cargo +stable package -p tokenmaster --locked
+          cargo +stable package -p ctxmaster --locked

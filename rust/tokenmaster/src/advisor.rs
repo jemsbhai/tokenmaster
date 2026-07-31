@@ -28,6 +28,8 @@ use std::str::FromStr;
 use serde::Serialize;
 use serde_json::{json, Map, Value};
 
+use crate::pricing::PricingSchedule;
+use crate::registry::default_registry;
 use crate::types::{
     as_map, opt_f64, opt_i64, req_string, string_or, Error, MeterState, ModelProfile, Pricing,
     SCHEMA_VERSION,
@@ -246,7 +248,9 @@ fn map_or_empty(d: &Map<String, Value>, key: &str, ctx: &str) -> Result<Map<Stri
     match d.get(key) {
         None | Some(Value::Null) => Ok(Map::new()),
         Some(Value::Object(o)) => Ok(o.clone()),
-        Some(_) => Err(Error::Parse(format!("{ctx}: field '{key}' is not an object"))),
+        Some(_) => Err(Error::Parse(format!(
+            "{ctx}: field '{key}' is not an object"
+        ))),
     }
 }
 
@@ -351,7 +355,10 @@ impl ThresholdPolicy {
                 "thresholds must satisfy 0 < warn_at < compact_at <= 1".to_string(),
             ));
         }
-        Ok(ThresholdPolicy { warn_at, compact_at })
+        Ok(ThresholdPolicy {
+            warn_at,
+            compact_at,
+        })
     }
 }
 
@@ -472,7 +479,9 @@ impl PredictivePolicy {
 
     pub fn with_params(buffer_turns: i64, soon_factor: f64) -> Result<Self, Error> {
         if buffer_turns < 0 {
-            return Err(Error::Value("buffer_turns must be non-negative".to_string()));
+            return Err(Error::Value(
+                "buffer_turns must be non-negative".to_string(),
+            ));
         }
         if soon_factor < 1.0 {
             return Err(Error::Value("soon_factor must be at least 1".to_string()));
@@ -575,7 +584,13 @@ impl Policy for PredictivePolicy {
 
         let eta = match eta {
             None => {
-                return delegated(self.policy_id(), self.fallback.as_ref(), state, task, inputs)
+                return delegated(
+                    self.policy_id(),
+                    self.fallback.as_ref(),
+                    state,
+                    task,
+                    inputs,
+                )
             }
             Some(eta) => eta,
         };
@@ -731,6 +746,7 @@ impl Default for CostModelConfig {
 /// cheaper of compact and handoff at urgency now.
 pub struct CostModelPolicy {
     pricing: Option<Pricing>,
+    pricing_schedule: Option<PricingSchedule>,
     config: CostModelConfig,
     fallback: Box<dyn Policy>,
 }
@@ -742,6 +758,33 @@ impl CostModelPolicy {
     }
 
     pub fn with_config(pricing: Option<Pricing>, config: CostModelConfig) -> Result<Self, Error> {
+        CostModelPolicy::with_pricing_schedule_config(pricing, None, config)
+    }
+
+    /// Construct directly from a tier-aware pricing schedule.
+    pub fn with_schedule(schedule: PricingSchedule) -> Self {
+        CostModelPolicy::with_schedule_config(schedule, CostModelConfig::default())
+            .expect("default cost-model parameters are valid")
+    }
+
+    pub fn with_schedule_config(
+        schedule: PricingSchedule,
+        config: CostModelConfig,
+    ) -> Result<Self, Error> {
+        CostModelPolicy::with_pricing_schedule_config(
+            Some(schedule.base.clone()),
+            Some(schedule),
+            config,
+        )
+    }
+
+    /// General constructor retaining the flat API while accepting a
+    /// schedule whose base must agree with `pricing` when both are present.
+    pub fn with_pricing_schedule_config(
+        pricing: Option<Pricing>,
+        pricing_schedule: Option<PricingSchedule>,
+        config: CostModelConfig,
+    ) -> Result<Self, Error> {
         for (name, value) in [
             ("compaction_ratio", config.compaction_ratio),
             ("summary_output_ratio", config.summary_output_ratio),
@@ -755,18 +798,44 @@ impl CostModelPolicy {
             ("expected_compaction_loss", config.expected_compaction_loss),
             ("expected_handoff_loss", config.expected_handoff_loss),
         ] {
-            if !(value >= 0.0 && value <= 1.0) {
+            if !(0.0..=1.0).contains(&value) {
                 return Err(Error::Value(format!("{name} must be in [0, 1]")));
             }
         }
         if config.human_friction < 0.0 {
-            return Err(Error::Value("human_friction must be non-negative".to_string()));
+            return Err(Error::Value(
+                "human_friction must be non-negative".to_string(),
+            ));
         }
         if config.default_horizon < 1 {
-            return Err(Error::Value("default_horizon must be at least 1".to_string()));
+            return Err(Error::Value(
+                "default_horizon must be at least 1".to_string(),
+            ));
         }
+        if let Some(schedule) = &pricing_schedule {
+            schedule.validate()?;
+            if !schedule.scope.unpriced_usage_categories.is_empty() {
+                return Err(Error::Value(format!(
+                    "cost model requires complete pricing; unpriced categories: {}",
+                    schedule.scope.unpriced_usage_categories.join(", ")
+                )));
+            }
+        }
+        if let (Some(pricing), Some(schedule)) = (&pricing, &pricing_schedule) {
+            if pricing != &schedule.base {
+                return Err(Error::Value(
+                    "pricing must equal pricing_schedule.base".to_string(),
+                ));
+            }
+        }
+        let pricing = pricing.or_else(|| {
+            pricing_schedule
+                .as_ref()
+                .map(|schedule| schedule.base.clone())
+        });
         Ok(CostModelPolicy {
             pricing,
+            pricing_schedule,
             config,
             fallback: Box::new(ThresholdPolicy::default()),
         })
@@ -777,9 +846,43 @@ impl CostModelPolicy {
         self
     }
 
-    /// Construct with the profile's dated pricing (None degrades to units).
+    /// Construct with the profile's dated pricing and a matching bundled
+    /// schedule when one exists.
     pub fn for_profile(profile: &ModelProfile) -> Self {
-        CostModelPolicy::new(profile.pricing.clone())
+        let pricing_schedule = default_registry()
+            .get_pricing_schedule(&profile.model_id)
+            .ok()
+            .flatten()
+            .filter(|schedule| profile.pricing.as_ref() == Some(&schedule.base));
+        CostModelPolicy::with_pricing_schedule_config(
+            profile.pricing.clone(),
+            pricing_schedule,
+            CostModelConfig::default(),
+        )
+        .expect("profile pricing and matching schedule are valid")
+    }
+
+    /// Construct from a profile and an explicit schedule.
+    pub fn for_profile_with_schedule(
+        profile: &ModelProfile,
+        pricing_schedule: PricingSchedule,
+    ) -> Result<Self, Error> {
+        CostModelPolicy::with_pricing_schedule_config(
+            profile.pricing.clone(),
+            Some(pricing_schedule),
+            CostModelConfig::default(),
+        )
+    }
+
+    /// Construct with a bundled registry model's flat or tier-aware price.
+    pub fn for_model(model_id: &str) -> Result<Self, Error> {
+        let registry = default_registry();
+        let profile = registry.get(model_id)?;
+        CostModelPolicy::with_pricing_schedule_config(
+            profile.pricing.clone(),
+            registry.get_pricing_schedule(model_id)?,
+            CostModelConfig::default(),
+        )
     }
 
     fn per_token_prices(&self) -> (f64, f64, f64, f64, String) {
@@ -797,6 +900,28 @@ impl CostModelPolicy {
             }
         }
     }
+
+    fn prices_for(&self, input_tokens: i64) -> (f64, f64, f64, f64, String, Option<i64>) {
+        match &self.pricing_schedule {
+            Some(schedule) => {
+                let (pricing, tier_min) = schedule
+                    .price_for(input_tokens)
+                    .expect("policy token estimates are non-negative");
+                (
+                    pricing.input / 1e6,
+                    pricing.output / 1e6,
+                    pricing.cache_read / 1e6,
+                    pricing.cache_write / 1e6,
+                    pricing.currency.clone(),
+                    tier_min,
+                )
+            }
+            None => {
+                let (input, output, cache_read, cache_write, unit) = self.per_token_prices();
+                (input, output, cache_read, cache_write, unit, None)
+            }
+        }
+    }
 }
 
 impl Policy for CostModelPolicy {
@@ -805,7 +930,6 @@ impl Policy for CostModelPolicy {
     }
 
     fn evaluate(&self, state: &MeterState, task: Option<&TaskContext>) -> Recommendation {
-        let (p_in, p_out, p_cr, p_cw, unit) = self.per_token_prices();
         let horizon = task.and_then(|t| t.expected_remaining_turns);
         let horizon_source = if horizon.is_some() { "task" } else { "default" };
         let k = horizon.unwrap_or(self.config.default_horizon);
@@ -815,6 +939,12 @@ impl Policy for CostModelPolicy {
         let t_sum = (t_pre as f64 * self.config.summary_output_ratio) as i64;
         let t_hand = (t_pre as f64 * self.config.handoff_prompt_ratio) as i64;
 
+        let (pre_in, pre_out, pre_cr, _pre_cw, unit, pre_tier_min) = self.prices_for(t_pre);
+        let (_post_in, _post_out, post_cr, post_cw, _post_unit, post_tier_min) =
+            self.prices_for(t_post);
+        let (_hand_in, _hand_out, hand_cr, hand_cw, _hand_unit, hand_tier_min) =
+            self.prices_for(t_hand);
+
         let mut inputs = Map::new();
         inputs.insert("t_pre".to_string(), json!(t_pre));
         inputs.insert("velocity".to_string(), json!(state.velocity));
@@ -822,9 +952,14 @@ impl Policy for CostModelPolicy {
         inputs.insert("horizon_source".to_string(), json!(horizon_source));
         inputs.insert(
             "prices_per_mtok".to_string(),
-            match &self.pricing {
-                Some(p) => serde_json::to_value(p).expect("Pricing serialization"),
-                None => json!("unit ratios (provisional)"),
+            match (&self.pricing_schedule, &self.pricing) {
+                (Some(schedule), _) => {
+                    serde_json::to_value(schedule).expect("PricingSchedule serialization")
+                }
+                (None, Some(pricing)) => {
+                    serde_json::to_value(pricing).expect("Pricing serialization")
+                }
+                (None, None) => json!("unit ratios (provisional)"),
             },
         );
         inputs.insert(
@@ -847,7 +982,10 @@ impl Policy for CostModelPolicy {
             "expected_handoff_loss".to_string(),
             json!(self.config.expected_handoff_loss),
         );
-        inputs.insert("human_friction".to_string(), json!(self.config.human_friction));
+        inputs.insert(
+            "human_friction".to_string(),
+            json!(self.config.human_friction),
+        );
         inputs.insert(
             "task_criticality".to_string(),
             json!(task.map(|t| t.task_criticality.as_str())),
@@ -855,15 +993,21 @@ impl Policy for CostModelPolicy {
 
         let exhausted = state.headroom_effective <= 0;
         if state.eta_turns.is_none() && !exhausted {
-            return delegated(self.policy_id(), self.fallback.as_ref(), state, task, inputs);
+            return delegated(
+                self.policy_id(),
+                self.fallback.as_ref(),
+                state,
+                task,
+                inputs,
+            );
         }
 
-        let saving_per_turn_compact = (t_pre - t_post) as f64 * p_cr;
-        let saving_per_turn_handoff = (t_pre - t_hand) as f64 * p_cr;
-        let one_time_compact = t_sum as f64 * p_out + t_post as f64 * (p_cw - p_cr);
-        let one_time_handoff = t_hand as f64 * p_out + t_hand as f64 * (p_cw - p_cr);
-        let info_compact = self.config.expected_compaction_loss * t_pre as f64 * p_in;
-        let info_handoff = self.config.expected_handoff_loss * t_pre as f64 * p_in;
+        let saving_per_turn_compact = t_pre as f64 * pre_cr - t_post as f64 * post_cr;
+        let saving_per_turn_handoff = t_pre as f64 * pre_cr - t_hand as f64 * hand_cr;
+        let one_time_compact = t_sum as f64 * pre_out + t_post as f64 * (post_cw - post_cr);
+        let one_time_handoff = t_hand as f64 * pre_out + t_hand as f64 * (hand_cw - hand_cr);
+        let info_compact = self.config.expected_compaction_loss * t_pre as f64 * pre_in;
+        let info_handoff = self.config.expected_handoff_loss * t_pre as f64 * pre_in;
 
         let k_star = if saving_per_turn_compact > 0.0 {
             Some(one_time_compact / saving_per_turn_compact)
@@ -880,14 +1024,13 @@ impl Policy for CostModelPolicy {
         let net_handoff = one_time_handoff + info_handoff + self.config.human_friction
             - k as f64 * saving_per_turn_handoff;
 
-        let overflow = !exhausted
-            && state
-                .eta_turns
-                .map_or(false, |eta| eta.expected < k as f64);
+        let overflow = !exhausted && state.eta_turns.is_some_and(|eta| eta.expected < k as f64);
         let continue_feasible = !exhausted && !overflow;
 
-        let mut candidates: Vec<(Action, f64)> =
-            vec![(Action::Compact, net_compact), (Action::Handoff, net_handoff)];
+        let mut candidates: Vec<(Action, f64)> = vec![
+            (Action::Compact, net_compact),
+            (Action::Handoff, net_handoff),
+        ];
         if continue_feasible {
             candidates.push((Action::Continue, 0.0));
         }
@@ -962,6 +1105,15 @@ impl Policy for CostModelPolicy {
         derived.insert("t_post".to_string(), json!(t_post));
         derived.insert("t_sum".to_string(), json!(t_sum));
         derived.insert("t_hand".to_string(), json!(t_hand));
+        derived.insert("pre_tier_min_input_tokens".to_string(), json!(pre_tier_min));
+        derived.insert(
+            "post_tier_min_input_tokens".to_string(),
+            json!(post_tier_min),
+        );
+        derived.insert(
+            "handoff_tier_min_input_tokens".to_string(),
+            json!(hand_tier_min),
+        );
 
         Recommendation {
             action,

@@ -3,6 +3,30 @@
 All notable changes to the tokenmaster npm package are documented in this
 file.
 
+## 0.2.0 (2026-07-31)
+
+- Added embedded profiles for the complete OpenAI GPT-5.6 family: Sol,
+  Terra, and Luna. The `gpt-5.6` and `openai:gpt-5.6` aliases resolve to
+  Sol.
+- Recorded the verified 1,050,000-token windows, 128,000-token output caps,
+  dated pricing, nonzero cache-write pricing, and Standard long-context
+  prices above 272K input tokens for all three GPT-5.6 profiles.
+- Added backward-compatible `PricingSchedule`, `PricingTier`, and
+  `PricingScope` registry data, tier-aware `quoteUsage`, request limit
+  checks, conservative `quoteEstimate` reservations, and schedule-aware
+  compaction/handoff economics, mirroring Python and Rust.
+- The canonical Python-maintained registry now has an explicit official-doc
+  refresh/check tool and a weekly report-only drift workflow; generated
+  JavaScript data remains embedded and network-free at runtime.
+- Kept the test and packaging gate compatible with Node.js 18 through 24.
+- Corrected the bundled GPT-5.4 mini output cap to 128,000 tokens and
+  refreshed its pricing provenance.
+- Added Gemini 3.1 Pro's verified 65,536-token output cap, Standard tier above
+  200K prompt tokens, and custom-tools endpoint alias; corrected Gemini 3.5
+  Flash's exact capacity. Gemini token-hour cache storage is explicitly
+  unpriced, so quotes and cost policies fail closed instead of treating writes
+  as free.
+
 ## 0.1.0 (2026-07-08)
 
 - Complete TypeScript port of the Python 0.1.0 reference, with full API

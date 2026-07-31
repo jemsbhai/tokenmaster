@@ -1,5 +1,7 @@
 """Tests for the context gauge, rendered to plain text and asserted on content."""
 
+from io import BytesIO, TextIOWrapper
+
 import pytest
 from rich.console import Console
 
@@ -33,6 +35,27 @@ def test_render_shows_usage_numbers_and_percent():
     assert "100,000" in text
     assert "50.0%" in text
     assert "test:model" in text
+
+
+def test_print_falls_back_to_ascii_for_non_unicode_windows_console():
+    buffer = BytesIO()
+    stream = TextIOWrapper(buffer, encoding="cp1252")
+    console = Console(
+        file=stream,
+        width=100,
+        color_system=None,
+        legacy_windows=True,
+    )
+    gauge = ContextGauge(console=console, bar_width=10)
+    meter = Meter(profile())
+    meter.record({"input_tokens": 50_000})
+
+    gauge.print(meter.state())
+    stream.flush()
+    rendered = buffer.getvalue().decode("cp1252")
+
+    assert "#####" in rendered
+    assert "\u2588" not in rendered
 
 
 def test_cold_start_reason_is_shown():

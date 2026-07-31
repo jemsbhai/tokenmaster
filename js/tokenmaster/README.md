@@ -84,18 +84,24 @@ Only window_nominal is load-bearing; pricing is optional and feeds the
 cost-model policy. Without a CalibrationRecord the gauges run against the
 nominal window and the provenance says so: "nominal (uncalibrated)".
 
-## What is in 0.1.0
+## What is in 0.2.0
 
 - Normalized TurnUsage accounting, with the hidden consumers (reasoning
   tokens, cache reads and writes, system prompt and tool-schema overhead) as
   first-class categories and a provenance tag on every number.
 - MeterState gauges: effective versus nominal budget, EWMA token velocity,
   turns-to-exhaustion with a conservative bound, zone classification.
-- A bundled model registry (12 models with dated, cited pricing), alias and
+- A bundled model registry (15 models with dated, cited pricing), alias and
   dated-suffix resolution, user overrides, and `Meter.forModel` for
   zero-configuration attachment. The snapshot is embedded at build time, so
   the core does no filesystem or network access and runs in browsers and
-  edge runtimes unchanged.
+  edge runtimes unchanged. GPT-5.6 Sol, Terra, and Luna include Standard
+  short- and long-context tiers.
+- Tier-aware usage quotes, conservative request-cost estimates, and limit
+  checks, with cache reads, cache writes, visible output, and reasoning kept
+  exclusive and auditable. Provider charges that require missing dimensions,
+  such as Gemini cache-storage token-hours, are marked unpriced and fail
+  closed instead of being quoted as free.
 - A typed event stream (six event types with exact wire round trips via
   `eventFromDict`): the contract that visualizers such as ctxmaster, or your
   own, build on.
@@ -115,16 +121,18 @@ nominal window and the provenance says so: "nominal (uncalibrated)".
 
 ## Not yet included (planned)
 
-Provider adapters (Anthropic and OpenAI usage normalizers), tokenizer
+Provider usage adapters (Anthropic and OpenAI response normalizers), tokenizer
 estimators, LLM-backed probe generators and judges, calibrated
 effective-capacity data (defaults equal the nominal window, and the
-provenance says so), async event delivery, and tiered long-context pricing
-in the registry. The Rust port is live on crates.io (tokenmaster and
-ctxmaster, 0.1.0), conformant against the same vectors.
+provenance says so), and async event delivery. The Rust port mirrors the 0.2
+pricing and limit APIs and remains conformant against the same vectors.
 
 ## Design
 
-The core has zero runtime dependencies and never touches the network. Every
+The core has zero runtime dependencies and never touches the network. The
+repository's separately invoked Python `tokenmaster-models` maintainer
+command refreshes the canonical registry and regenerates this embedded copy.
+Every
 quantity carries its provenance; every recommendation ships the arithmetic
 that produced it; parameters that have not been measured yet are labeled
 provisional. The full contract lives at `docs/core-api.md` in the

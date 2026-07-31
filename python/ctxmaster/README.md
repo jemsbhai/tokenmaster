@@ -39,13 +39,14 @@ with gauge.live(meter):
 A runnable demonstration lives at `examples/demo_gauge.py` in the
 repository: a simulated agent accelerating from green into critical.
 
-## What is in 0.1.0
+## What is in 0.1.2
 
-The terminal gauge with per-turn and live rendering. Planned next: the
+The terminal gauge with per-turn and live rendering, compatible with
+Tokenmaster 0.1 and 0.2. Planned next: the
 advice panel rendering tokenmaster recommendations with their rationale, a
 CLI, and dashboard surfaces. The npm and crates.io packages of the same
-name are live at 0.1.0, rendering in raw ANSI with no dependencies beyond
-the core.
+name provide the matching raw-ANSI gauge with no dependencies beyond the
+core.
 
 ## License
 

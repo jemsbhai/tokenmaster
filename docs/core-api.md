@@ -1,10 +1,10 @@
 # tokenmaster core API contract
 
-Version: 0.1 (2026-07-07)
+Wire schema: 0.1 (2026-07-07); additive pricing/limits API: 0.2 (2026-07-31)
 Status: accepted 2026-07-07; resolved decisions recorded in section 11.
-Implemented by the Python reference (PyPI 0.1.0), the JavaScript port
-(npm 0.1.0), and the Rust port (crates.io 0.1.0), all three reproducing the
-conformance vectors under spec/. This contract
+Implemented by the Python reference package, JavaScript port, and Rust port
+(version 0.2.0), all three reproducing
+the conformance vectors under spec/. This contract
 governs the Python, JavaScript, and Rust implementations equally. Divergence
 between an implementation and this document is a bug in the implementation or
 a change request against this document, never a silent fork.
@@ -70,7 +70,31 @@ Identity and capacities for one model.
 
 The registry ships as a bundled snapshot (works offline), accepts user
 overrides, and can refresh explicitly. Pricing is optional and dated because
-it goes stale; capacities are the load-bearing fields.
+it goes stale; capacities are the load-bearing fields. The 0.2 registry may
+attach a `PricingSchedule` sidecar to a profile while retaining `pricing` as
+the base rate for 0.1 readers. A schedule contains an inclusive ordered list
+of `PricingTier(min_input_tokens, pricing)` values and a `PricingScope`
+(initially Standard service, global processing, selected by total request
+input tokens). Normal registry lookup and metering remain entirely offline.
+
+`quote_usage` / `quoteUsage` / `quote_usage` select the applicable tier from
+uncached input plus cache-read plus cache-write tokens, then price the five
+exclusive `TurnUsage` categories; reasoning uses the output rate. The quote
+includes the selected tier, component costs, currency, date, and source.
+`quote_estimate` and its language equivalents reserve input at the highest
+selected-tier input/cache-read/cache-write rate by default, plus reserved
+output at the output rate, and expose that conservative assumption explicitly.
+`PricingScope.unpriced_usage_categories` identifies provider charges that
+cannot be represented by the per-request token ledger. Exact quotes reject a
+nonzero marked category, conservative estimates reject an unknown input mix,
+and the cost model rejects incomplete schedules. A caller may request a
+non-conservative uncached-input estimate, whose assumptions then state that
+unpriced cache storage is excluded. This is used for Google's token-hour cache
+storage charge; a legacy zero in the flat `Pricing` shape does not mean free.
+`check_request_limits` and its language equivalents independently check the
+provider-safe input ceiling, the requested/reserved context total, and an
+explicit requested output cap. These helpers report; they do not dispatch or
+cancel provider requests.
 
 ### 3.2 TurnUsage
 
@@ -310,7 +334,7 @@ requires an arbitrary JSON value type. The bundled models.json is a
 committed copy inside the crate, held equal to the canonical Python file by
 a sync test. Event timestamps carry a Z suffix with microsecond precision
 from a standard-library-only conversion; comparison rule 1 makes the format
-non-normative. Edition 2021, minimum supported Rust 1.70.
+non-normative. Edition 2021, minimum supported Rust 1.71.
 
 ## 8. Adapters and extension points
 

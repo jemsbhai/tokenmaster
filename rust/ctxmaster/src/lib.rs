@@ -101,7 +101,7 @@ fn detect_colors() -> bool {
             return true;
         }
     }
-    if std::env::var_os("TERM").map_or(false, |term| term == "dumb") {
+    if std::env::var_os("TERM").as_deref() == Some(std::ffi::OsStr::new("dumb")) {
         return false;
     }
     std::io::stdout().is_terminal()
@@ -159,9 +159,11 @@ fn percent6(fraction: f64) -> String {
 
 /// Construction options; the reference's keyword arguments. Construct with
 /// [`GaugeOptions::default`] and override fields via struct update.
+pub type WriteSink = Box<dyn Fn(&str) + Send + Sync>;
+
 pub struct GaugeOptions {
     /// Output sink; defaults to stdout with a flush per write.
-    pub write: Option<Box<dyn Fn(&str) + Send + Sync>>,
+    pub write: Option<WriteSink>,
     /// Emit ANSI colors. Defaults to environment detection for the default
     /// stream, and to false when a custom write sink is supplied.
     pub colors: Option<bool>,

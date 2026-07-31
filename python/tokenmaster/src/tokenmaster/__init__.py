@@ -1,8 +1,8 @@
 """tokenmaster: core context-budget metering and decision engine for LLM applications.
 
-0.1.x alpha: implements the core API contract (docs/core-api.md, 0.1) with
-conformance vectors under spec/. The public surface may still shift before
-0.2; provider adapters, tokenizer estimators, and LLM-backed probe
+0.2 alpha: implements the stable 0.1 Meter/Event wire contract plus additive
+tier-aware pricing and request-limit APIs, with conformance vectors under
+spec/. Provider usage adapters, tokenizer estimators, and LLM-backed probe
 generators are planned but not yet included.
 """
 
@@ -41,22 +41,37 @@ from .fidelity import (
     evaluate_handoff,
 )
 from .meter import Meter
-from .registry import Registry, UnknownModelError, default_registry, get_profile
+from .registry import (
+    Registry,
+    UnknownModelError,
+    check_request_limits,
+    default_registry,
+    get_pricing_schedule,
+    get_profile,
+    quote_estimate,
+    quote_usage,
+)
 from .types import (
     SCHEMA_VERSION,
     Breakdown,
     CacheState,
     CalibrationRecord,
+    CostEstimate,
+    CostQuote,
     EtaEstimate,
+    LimitCheck,
     MeterState,
     ModelProfile,
     Pricing,
+    PricingSchedule,
+    PricingScope,
+    PricingTier,
     TurnUsage,
     UsageSource,
     Zone,
 )
 
-__version__ = "0.1.1"
+__version__ = "0.2.0"
 
 __all__ = [
     "Meter",
@@ -92,6 +107,10 @@ __all__ = [
     "UnknownModelError",
     "default_registry",
     "get_profile",
+    "get_pricing_schedule",
+    "quote_usage",
+    "quote_estimate",
+    "check_request_limits",
     "SCHEMA_VERSION",
     "Breakdown",
     "CacheState",
@@ -100,6 +119,12 @@ __all__ = [
     "MeterState",
     "ModelProfile",
     "Pricing",
+    "PricingScope",
+    "PricingTier",
+    "PricingSchedule",
+    "CostEstimate",
+    "CostQuote",
+    "LimitCheck",
     "TurnUsage",
     "UsageSource",
     "Zone",

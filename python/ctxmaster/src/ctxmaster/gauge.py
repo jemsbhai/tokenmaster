@@ -36,6 +36,7 @@ ZONE_STYLE = {
 _FILLED = "\u2588"   # full block
 _EMPTY = "\u2591"    # light shade
 _TICK = "\u2502"     # vertical line
+_ASCII_GLYPHS = ("#", "-", "|")
 
 
 class ContextGauge:
@@ -55,6 +56,12 @@ class ContextGauge:
         self.bar_width = bar_width
         self.caution = caution
         self.critical = critical
+        try:
+            (_FILLED + _EMPTY + _TICK).encode(self.console.encoding)
+        except (LookupError, UnicodeEncodeError):
+            self._filled, self._empty, self._tick = _ASCII_GLYPHS
+        else:
+            self._filled, self._empty, self._tick = _FILLED, _EMPTY, _TICK
 
     # ------------------------------------------------------------------ #
     # rendering (pure)
@@ -81,11 +88,11 @@ class ContextGauge:
         bar = Text()
         for i in range(width):
             if i < filled:
-                bar.append(_FILLED, style=ZONE_STYLE[state.zone])
+                bar.append(self._filled, style=ZONE_STYLE[state.zone])
             elif i in ticks:
-                bar.append(_TICK, style="dim")
+                bar.append(self._tick, style="dim")
             else:
-                bar.append(_EMPTY, style="grey37")
+                bar.append(self._empty, style="grey37")
         bar.append(f" {state.fill_effective:6.1%}", style="bold")
         return bar
 

@@ -17,7 +17,13 @@ from dataclasses import asdict, dataclass, field
 from enum import Enum
 from typing import Any, Mapping, Protocol
 
-from .types import SCHEMA_VERSION, MeterState
+from .types import (
+    SCHEMA_VERSION,
+    MeterState,
+    ModelProfile,
+    Pricing,
+    PricingSchedule,
+)
 
 
 class Action(str, Enum):
@@ -376,13 +382,16 @@ class CostModelPolicy:
     growth cancels between branches (both paths grow identically), so the
     savings term is exact under the equal-growth assumption.
 
-    Prices come from a Pricing (per-Mtok, converted internally to per-token)
-    or, when absent, from provisional unit ratios (in 1.0, out 5.0, cache
-    read 0.1, cache write 1.25 per token) with the ledger unit reported as
-    "token-units" instead of a currency. All ratios and loss parameters are
-    provisional pending experiments E3 and E4 and are recorded in the
-    rationale inputs. With no prediction available (cold start), the policy
-    delegates to a fallback and says so; with no headroom, it picks the
+    Prices come from a flat Pricing or a PricingSchedule (per-Mtok, converted
+    internally to per-token).  A schedule selects rates independently for the
+    standing, compacted, and handoff prompt sizes, so crossing a long-context
+    boundary changes both the current read cost and the smaller aftermath.
+    When pricing is absent, provisional unit ratios (in 1.0, out 5.0, cache
+    read 0.1, cache write 1.25 per token) are used and the ledger unit is
+    reported as "token-units" instead of a currency. All ratios and loss
+    parameters are provisional pending experiments E3 and E4 and are recorded
+    in the rationale inputs. With no prediction available (cold start), the
+    policy delegates to a fallback and says so; with no headroom, it picks the
     cheaper of compact and handoff at urgency now.
     """
 
@@ -390,6 +399,7 @@ class CostModelPolicy:
         self,
         *,
         pricing: Pricing | None = None,
+        pricing_schedule: PricingSchedule | None = None,
         compaction_ratio: float = 0.15,
         summary_output_ratio: float = 0.10,
         handoff_prompt_ratio: float = 0.05,
@@ -416,7 +426,21 @@ class CostModelPolicy:
             raise ValueError("human_friction must be non-negative")
         if default_horizon < 1:
             raise ValueError("default_horizon must be at least 1")
-        self.pricing = pricing
+        if pricing is not None and pricing_schedule is not None:
+            if pricing != pricing_schedule.base:
+                raise ValueError("pricing must equal pricing_schedule.base")
+        if (
+            pricing_schedule is not None
+            and pricing_schedule.scope.unpriced_usage_categories
+        ):
+            raise ValueError(
+                "cost model requires complete pricing; unpriced categories: "
+                + ", ".join(pricing_schedule.scope.unpriced_usage_categories)
+            )
+        self.pricing_schedule = pricing_schedule
+        self.pricing = pricing or (
+            pricing_schedule.base if pricing_schedule is not None else None
+        )
         self.compaction_ratio = compaction_ratio
         self.summary_output_ratio = summary_output_ratio
         self.handoff_prompt_ratio = handoff_prompt_ratio
@@ -428,9 +452,48 @@ class CostModelPolicy:
         self.policy_id = "cost-model"
 
     @classmethod
-    def for_profile(cls, profile: ModelProfile, **kwargs: Any) -> "CostModelPolicy":
-        """Construct with the profile's dated pricing (None degrades to units)."""
-        return cls(pricing=profile.pricing, **kwargs)
+    def for_profile(
+        cls,
+        profile: ModelProfile,
+        *,
+        pricing_schedule: PricingSchedule | None = None,
+        **kwargs: Any,
+    ) -> "CostModelPolicy":
+        """Construct from a profile and an optional tier-aware schedule."""
+        if pricing_schedule is None:
+            # Import lazily so the registry can continue importing ModelProfile.
+            from .registry import default_registry
+
+            try:
+                candidate = default_registry().get_pricing_schedule(profile.model_id)
+            except LookupError:
+                candidate = None
+            if candidate is not None and candidate.base == profile.pricing:
+                pricing_schedule = candidate
+        return cls(
+            pricing=profile.pricing,
+            pricing_schedule=pricing_schedule,
+            **kwargs,
+        )
+
+    @classmethod
+    def for_model(
+        cls,
+        model_id: str,
+        *,
+        registry: Any = None,
+        **kwargs: Any,
+    ) -> "CostModelPolicy":
+        """Construct with a registry model's flat or tier-aware pricing."""
+        from .registry import default_registry
+
+        resolved_registry = registry or default_registry()
+        profile = resolved_registry.get(model_id)
+        return cls(
+            pricing=profile.pricing,
+            pricing_schedule=resolved_registry.get_pricing_schedule(model_id),
+            **kwargs,
+        )
 
     def _per_token_prices(self) -> tuple[float, float, float, float, str]:
         if self.pricing is not None:
@@ -445,10 +508,25 @@ class CostModelPolicy:
         i, o, cr, cw = _UNIT_PRICES
         return i, o, cr, cw, "token-units"
 
+    def _prices_for(
+        self, input_tokens: int
+    ) -> tuple[float, float, float, float, str, int | None]:
+        if self.pricing_schedule is None:
+            p_in, p_out, p_cr, p_cw, unit = self._per_token_prices()
+            return p_in, p_out, p_cr, p_cw, unit, None
+        pricing, tier_min = self.pricing_schedule.price_for(input_tokens)
+        return (
+            pricing.input / 1e6,
+            pricing.output / 1e6,
+            pricing.cache_read / 1e6,
+            pricing.cache_write / 1e6,
+            pricing.currency,
+            tier_min,
+        )
+
     def evaluate(
         self, state: MeterState, task: TaskContext | None = None
     ) -> Recommendation:
-        p_in, p_out, p_cr, p_cw, unit = self._per_token_prices()
         horizon = task.expected_remaining_turns if task else None
         horizon_source = "task" if horizon is not None else "default"
         k = horizon if horizon is not None else self.default_horizon
@@ -458,13 +536,44 @@ class CostModelPolicy:
         t_sum = int(t_pre * self.summary_output_ratio)
         t_hand = int(t_pre * self.handoff_prompt_ratio)
 
+        (
+            pre_in,
+            pre_out,
+            pre_cr,
+            _pre_cw,
+            unit,
+            pre_tier_min,
+        ) = self._prices_for(t_pre)
+        (
+            _post_in,
+            _post_out,
+            post_cr,
+            post_cw,
+            _post_unit,
+            post_tier_min,
+        ) = self._prices_for(t_post)
+        (
+            _hand_in,
+            _hand_out,
+            hand_cr,
+            hand_cw,
+            _hand_unit,
+            hand_tier_min,
+        ) = self._prices_for(t_hand)
+
         inputs: dict[str, Any] = {
             "t_pre": t_pre,
             "velocity": state.velocity,
             "horizon": k,
             "horizon_source": horizon_source,
             "prices_per_mtok": (
-                self.pricing.to_dict() if self.pricing else "unit ratios (provisional)"
+                self.pricing_schedule.to_dict()
+                if self.pricing_schedule is not None
+                else (
+                    self.pricing.to_dict()
+                    if self.pricing
+                    else "unit ratios (provisional)"
+                )
             ),
             "compaction_ratio": self.compaction_ratio,
             "summary_output_ratio": self.summary_output_ratio,
@@ -498,12 +607,12 @@ class CostModelPolicy:
                 policy_id=self.policy_id,
             )
 
-        saving_per_turn_compact = (t_pre - t_post) * p_cr
-        saving_per_turn_handoff = (t_pre - t_hand) * p_cr
-        one_time_compact = t_sum * p_out + t_post * (p_cw - p_cr)
-        one_time_handoff = t_hand * p_out + t_hand * (p_cw - p_cr)
-        info_compact = self.expected_compaction_loss * t_pre * p_in
-        info_handoff = self.expected_handoff_loss * t_pre * p_in
+        saving_per_turn_compact = t_pre * pre_cr - t_post * post_cr
+        saving_per_turn_handoff = t_pre * pre_cr - t_hand * hand_cr
+        one_time_compact = t_sum * pre_out + t_post * (post_cw - post_cr)
+        one_time_handoff = t_hand * pre_out + t_hand * (hand_cw - hand_cr)
+        info_compact = self.expected_compaction_loss * t_pre * pre_in
+        info_handoff = self.expected_handoff_loss * t_pre * pre_in
 
         k_star = (
             one_time_compact / saving_per_turn_compact
@@ -591,6 +700,9 @@ class CostModelPolicy:
                     "t_post": t_post,
                     "t_sum": t_sum,
                     "t_hand": t_hand,
+                    "pre_tier_min_input_tokens": pre_tier_min,
+                    "post_tier_min_input_tokens": post_tier_min,
+                    "handoff_tier_min_input_tokens": hand_tier_min,
                 },
                 comparison=comparison,
             ),

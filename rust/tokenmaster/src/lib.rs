@@ -12,7 +12,9 @@
 pub mod advisor;
 pub mod events;
 pub mod fidelity;
+pub mod limits;
 pub mod meter;
+pub mod pricing;
 pub mod registry;
 pub mod types;
 
@@ -25,8 +27,17 @@ pub use fidelity::{
     evaluate_handoff, evaluate_handoff_with, Answerer, EvaluateOptions, ExactMatchJudge,
     FidelityReport, Judge, Probe, ProbeCategory, ProbeGenerator, ProbeOutcome,
 };
+pub use limits::{
+    check_profile_request_limits, check_request_limits, check_request_limits_with_registry,
+    CapacityKind, LimitCheck,
+};
 pub use meter::{Meter, MeterConfig, SubscriptionId};
-pub use registry::{default_registry, get_profile, Registry};
+pub use pricing::{
+    quote_estimate, quote_estimate_with_registry, quote_profile_estimate, quote_profile_usage,
+    quote_usage, quote_usage_with_registry, CostEstimate, CostQuote, PricingSchedule, PricingScope,
+    PricingTier,
+};
+pub use registry::{default_registry, get_pricing_schedule, get_profile, Registry};
 pub use types::{
     Breakdown, CacheState, CalibrationRecord, Error, EtaEstimate, MeterState, ModelProfile,
     Pricing, TurnUsage, UsageSource, Zone, SCHEMA_VERSION,
