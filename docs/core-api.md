@@ -334,7 +334,7 @@ requires an arbitrary JSON value type. The bundled models.json is a
 committed copy inside the crate, held equal to the canonical Python file by
 a sync test. Event timestamps carry a Z suffix with microsecond precision
 from a standard-library-only conversion; comparison rule 1 makes the format
-non-normative. Edition 2021, minimum supported Rust 1.70.
+non-normative. Edition 2021, minimum supported Rust 1.71.
 
 ## 8. Adapters and extension points
 

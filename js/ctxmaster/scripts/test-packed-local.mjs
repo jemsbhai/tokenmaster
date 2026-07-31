@@ -13,16 +13,27 @@ import { fileURLToPath } from "node:url";
 const here = dirname(fileURLToPath(import.meta.url));
 const ctxmasterRoot = resolve(here, "..");
 const tokenmasterRoot = resolve(ctxmasterRoot, "..", "tokenmaster");
-const npm = process.platform === "win32" ? "npm.cmd" : "npm";
 const expectedCoreVersion = "0.2.0";
+
+function runNpm(args, options) {
+  const npmExecPath = process.env.npm_execpath;
+  if (npmExecPath) {
+    return execFileSync(process.execPath, [npmExecPath, ...args], options);
+  }
+  if (process.platform === "win32") {
+    throw new Error(
+      "npm_execpath is unavailable on Windows; run this check through npm test",
+    );
+  }
+  return execFileSync("npm", args, options);
+}
 
 function packageVersion(root) {
   return JSON.parse(readFileSync(join(root, "package.json"), "utf8")).version;
 }
 
 function pack(root, destination) {
-  const output = execFileSync(
-    npm,
+  const output = runNpm(
     ["pack", "--json", "--pack-destination", destination],
     { cwd: root, encoding: "utf8", stdio: ["ignore", "pipe", "inherit"] },
   );
@@ -47,8 +58,7 @@ try {
     join(sandbox, "package.json"),
     JSON.stringify({ name: "ctxmaster-packed-test", private: true }),
   );
-  execFileSync(
-    npm,
+  runNpm(
     [
       "install",
       "--ignore-scripts",

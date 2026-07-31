@@ -1,0 +1,119 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  python:
+    name: Python ${{ matrix.python-version }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.14"]
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install test and build dependencies
+        run: >-
+          python -m pip install
+          pytest==9.1.1
+          build==1.5.0
+          twine==6.2.0
+          ruff==0.15.0
+          mypy==1.19.1
+          -e python/tokenmaster
+          -e python/ctxmaster
+
+      - name: Lint and type-check
+        run: |
+          ruff check python
+          mypy python/tokenmaster/src python/ctxmaster/src
+
+      - name: Test
+        run: python -m pytest python/tokenmaster/tests python/ctxmaster/tests -q
+
+      - name: Build and inspect distributions
+        run: |
+          python -m build python/tokenmaster --outdir artifacts/python/tokenmaster
+          python -m build python/ctxmaster --outdir artifacts/python/ctxmaster
+          python -m twine check --strict artifacts/python/tokenmaster/* artifacts/python/ctxmaster/*
+
+  javascript:
+    name: Node.js ${{ matrix.node-version }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        node-version: [18, 24]
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: ${{ matrix.node-version }}
+
+      - name: Install dependencies
+        run: |
+          npm --prefix js/tokenmaster ci
+          npm --prefix js/ctxmaster ci
+
+      - name: Test and inspect packages
+        run: |
+          npm --prefix js/tokenmaster test
+          npm --prefix js/ctxmaster test
+          npm --prefix js/tokenmaster pack --dry-run
+          npm --prefix js/ctxmaster pack --dry-run
+
+  rust-msrv:
+    name: Rust 1.71 MSRV
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - name: Install the minimum supported Rust toolchain
+        run: rustup toolchain install 1.71.0 --profile minimal
+
+      - name: Test and package with the MSRV
+        working-directory: rust
+        run: |
+          cargo +1.71.0 test --workspace --all-targets --locked
+          cargo +1.71.0 package -p tokenmaster --locked
+          cargo +1.71.0 package -p ctxmaster --locked
+
+  rust-stable:
+    name: Rust stable
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - name: Install the stable Rust toolchain
+        run: rustup toolchain install stable --profile minimal --component clippy,rustfmt
+
+      - name: Test, lint, and package
+        working-directory: rust
+        run: |
+          cargo +stable test --workspace --all-targets --locked
+          cargo +stable fmt --all --check
+          cargo +stable clippy --workspace --all-targets --locked -- -D warnings
+          cargo +stable package -p tokenmaster --locked
+          cargo +stable package -p ctxmaster --locked

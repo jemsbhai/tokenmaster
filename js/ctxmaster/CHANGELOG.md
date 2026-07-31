@@ -8,6 +8,8 @@ file.
 - Widened the compatible Tokenmaster range to `>=0.1.0 <0.3.0` so the
   visualization package can be installed with Tokenmaster 0.2.0. No gauge
   or wire behavior changed.
+- Kept the test and packed-package compatibility gates working on Node.js
+  18 through 24, including npm invocation on Windows.
 - Locked repository tests to the local Tokenmaster 0.2.0 workspace package
   and added a packed-tarball consumer smoke test. The published dependency
   remains the compatible semver range above.

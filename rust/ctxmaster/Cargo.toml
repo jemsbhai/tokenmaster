@@ -2,7 +2,7 @@
 name = "ctxmaster"
 version = "0.1.1"
 edition = "2021"
-rust-version = "1.70"
+rust-version = "1.71"
 description = "Visualization layer for tokenmaster: terminal context gauge for LLM context-budget metering, rendered in raw ANSI with zero dependencies beyond the core."
 license = "MIT"
 repository = "https://github.com/jemsbhai/tokenmaster"

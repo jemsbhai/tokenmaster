@@ -29,7 +29,7 @@
     "embed:models": "node scripts/embed-models.mjs",
     "build": "npm run clean && tsc -p tsconfig.cjs.json && tsc -p tsconfig.esm.json && node scripts/write-esm-stub.mjs",
     "pretest": "npm run build",
-    "test": "node --test test/",
+    "test": "node --test",
     "prepublishOnly": "npm test"
   },
   "keywords": [

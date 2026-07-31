@@ -18,6 +18,7 @@ file.
 - The canonical Python-maintained registry now has an explicit official-doc
   refresh/check tool and a weekly report-only drift workflow; generated
   JavaScript data remains embedded and network-free at runtime.
+- Kept the test and packaging gate compatible with Node.js 18 through 24.
 - Corrected the bundled GPT-5.4 mini output cap to 128,000 tokens and
   refreshed its pricing provenance.
 - Added Gemini 3.1 Pro's verified 65,536-token output cap, Standard tier above

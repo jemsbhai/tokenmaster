@@ -19,6 +19,8 @@ All notable changes to the Tokenmaster Rust crate are documented here.
   Flash's exact capacity. Gemini token-hour cache storage is explicitly
   unpriced, so quotes and cost policies fail closed instead of treating writes
   as free.
+- Set the minimum supported Rust version to 1.71 and retain a Cargo v3
+  lockfile so the declared toolchain can parse and test the workspace.
 
 ## 0.1.0 (2026-07-08)
 
